@@ -2,7 +2,7 @@ name: Signed Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v0.1.0"]
 
 env:
   REGISTRY: ghcr.io

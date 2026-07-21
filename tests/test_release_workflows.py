@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CANONICAL_IMAGE_NAME = "577industries/forge-qbit-qsparx"
+RELEASE_VERSION = "0.1.0"
 
 
 def workflow(name: str) -> str:
@@ -37,6 +38,24 @@ def test_release_uses_the_lowercase_canonical_oci_name() -> None:
     assert f"IMAGE_NAME: {CANONICAL_IMAGE_NAME}" in release
     assert "IMAGE_NAME: ${{ github.repository }}" not in release
     assert CANONICAL_IMAGE_NAME.lower() == CANONICAL_IMAGE_NAME
+
+
+def test_release_trigger_notes_and_package_assets_share_one_version() -> None:
+    release = workflow("release.yml")
+    release_tag = f"v{RELEASE_VERSION}"
+
+    assert f'tags: ["{release_tag}"]' in release
+    assert 'tags: ["v*"]' not in release
+    assert f"body_path: docs/releases/{release_tag}.md" in release
+    assert f"release/forge_qbit_qsparx-{RELEASE_VERSION}-py3-none-any.whl" in release
+    assert f"release/forge_qbit_qsparx-{RELEASE_VERSION}.tar.gz" in release
+
+
+def test_release_notes_limit_determinism_claim_to_mission_and_demo_data() -> None:
+    notes = (ROOT / "docs" / "releases" / "v0.1.0.md").read_text(encoding="utf-8")
+
+    assert "All included mission and demo data is deterministic" in notes
+    assert "All included data is deterministic" not in notes
 
 
 def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() -> None:
