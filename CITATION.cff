@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using this metadata."
+title: "Forge Qbit QSPARX"
+type: software
+authors:
+  - family-names: "Waweru"
+    given-names: "Thomas"
+version: 0.1.0
+date-released: 2026-07-21
+license: Apache-2.0
+repository-code: "https://github.com/577Industries/forge-qbit-qsparx"
+abstract: "Synthetic, evidence-first cryptographic mission twin for post-quantum migration planning."

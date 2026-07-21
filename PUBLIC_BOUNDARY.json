@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "source_snapshot": "9277ee7d6a9acc8085ec56f5ea6150d39165e73c",
+  "source_tree": "127371409ad53f9e1c4c6a3cf1e881534ba558e1",
+  "public_history": "orphan_root",
+  "excluded_paths": [
+    "proposal/"
+  ],
+  "data_policy": "synthetic_only"
+}

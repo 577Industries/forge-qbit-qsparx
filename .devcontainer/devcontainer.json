@@ -1,0 +1,11 @@
+{
+  "name": "Forge Qbit QSPARX",
+  "build": { "dockerfile": "../Dockerfile", "context": ".." },
+  "remoteUser": "qsparx",
+  "forwardPorts": [8775],
+  "customizations": {
+    "vscode": {
+      "extensions": ["charliermarsh.ruff", "ms-python.python"]
+    }
+  }
+}

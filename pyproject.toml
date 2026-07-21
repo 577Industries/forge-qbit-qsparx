@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forge-qbit-qsparx"
+version = "0.1.0"
+description = "A synthetic, evidence-first cryptographic mission twin"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "577 Industries" }]
+dependencies = [
+  "cryptography==49.0.0",
+  "fastapi==0.139.2",
+  "networkx==3.5",
+  "pydantic==2.11.7",
+  "scikit-learn==1.7.1",
+  "shap==0.48.0",
+  "typer==0.16.0",
+  "uvicorn==0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx2==2.7.0",
+  "jsonschema==4.25.0",
+  "mypy==1.17.0",
+  "pip-audit==2.10.1",
+  "pytest==9.1.1",
+  "pytest-cov==6.2.1",
+  "ruff==0.12.5",
+]
+
+[project.scripts]
+forge-qsparx = "forge_qsparx.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/forge_qsparx"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# These are complete HTML, CSS, and JavaScript assets embedded for a deterministic
+# single-module GitHub Pages build; wrapping their source lines would alter output.
+"src/forge_qsparx/reviewer.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["forge_qsparx"]
+
+[[tool.mypy.overrides]]
+# These scientific packages do not all publish complete type information.
+module = ["networkx", "networkx.*", "shap", "shap.*", "sklearn", "sklearn.*"]
+ignore_missing_imports = true
