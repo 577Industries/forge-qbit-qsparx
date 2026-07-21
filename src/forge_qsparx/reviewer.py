@@ -79,8 +79,9 @@ INDEX_HTML = """<!doctype html>
       </div>
       <div class="verification-path">
         <h3>Ten-minute verification path</h3>
-        <p>From a clean checkout, bind the source, install the locked development environment, and run the deterministic gates:</p>
-        <pre><code>git checkout --detach @@SOURCE_COMMIT@@
+        <p>From a clean checkout, bind the source, install the locked development environment, and run the deterministic gates. Node.js 22 or newer is used only for reviewer verification; CI and release automation pin Node.js 24. The generated site has no Node runtime dependency.</p>
+        <pre><code>node --version  # requires v22+; CI/release pin v24
+git checkout --detach @@SOURCE_COMMIT@@
 uv sync --frozen --extra dev
 make verify
 make benchmark-smoke

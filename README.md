@@ -25,9 +25,10 @@ for the enforced exclusion and data policy.
 
 ## Quick start
 
-Python 3.12 and [uv](https://docs.astral.sh/uv/) are required. Node.js 24 is a
-development and reviewer-verification prerequisite for the executable static
-reviewer tests; it is not an application runtime dependency.
+Python 3.12 and [uv](https://docs.astral.sh/uv/) are required.
+Node.js 22 or newer is a development and reviewer-verification prerequisite for
+the executable static reviewer tests; it is not an application runtime
+dependency. CI and release automation pin Node.js 24.
 
 ```bash
 uv sync --frozen --extra dev
@@ -52,7 +53,7 @@ require an approval token and an exact workspace-world binding.
 ## Reviewer path
 
 ```bash
-node --version  # expected: v24.x
+node --version  # requires v22+; CI/release pin v24
 make reviewer-demo
 uv run python -m http.server 8000 --directory site
 ```

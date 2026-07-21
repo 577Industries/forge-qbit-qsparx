@@ -67,15 +67,26 @@ def test_ci_exposes_required_branch_protection_checks() -> None:
         assert f"name: {job_name}" in ci
 
 
-def test_linux_and_windows_ci_pin_node_24_before_reviewer_tests() -> None:
+def test_every_pytest_or_verify_job_pins_node_24_before_reviewer_tests() -> None:
     ci = workflow("ci.yml")
+    pages_workflow = workflow("pages.yml")
+    release_workflow = workflow("release.yml")
     setup_node = (
         "uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0"
     )
     linux = ci.split("  linux:\n", 1)[1].split("  windows:\n", 1)[0]
     windows = ci.split("  windows:\n", 1)[1].split("  dependency-audit:\n", 1)[0]
+    pages_build = pages_workflow.split("  build:\n", 1)[1].split("  deploy:\n", 1)[0]
+    release = release_workflow.split("  release:\n", 1)[1].split("  publish-pages:\n", 1)[0]
 
     assert ci.count(setup_node) == 2
-    for job in (linux, windows):
+    assert pages_workflow.count(setup_node) == 1
+    assert release_workflow.count(setup_node) == 1
+    for job, verifier in (
+        (linux, "uv run pytest -q"),
+        (windows, "uv run pytest -q"),
+        (pages_build, "make reviewer-demo verify"),
+        (release, "make verify benchmark-smoke audit"),
+    ):
         assert 'node-version: "24"' in job
-        assert job.index(setup_node) < job.index("uv run pytest -q")
+        assert job.index(setup_node) < job.index(verifier)

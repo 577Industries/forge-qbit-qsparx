@@ -1,3 +1,4 @@
+import re
 import shutil
 import subprocess
 from datetime import UTC, datetime
@@ -11,6 +12,7 @@ REPOSITORY_URL = "https://github.com/577Industries/forge-qbit-qsparx"
 RELEASE_TAG = "v0.1.0"
 SOURCE_COMMIT = "b" * 40
 IMAGE_DIGEST = "sha256:" + "c" * 64
+MINIMUM_NODE_MAJOR = 22
 
 
 def build_bound_reviewer(output_dir: Path) -> ReviewerSite:
@@ -24,12 +26,41 @@ def build_bound_reviewer(output_dir: Path) -> ReviewerSite:
     )
 
 
-def run_reviewer_logic(app_path: Path, assertions: str) -> None:
+def parse_node_major(version: str) -> int:
+    match = re.fullmatch(r"v?(\d+)\.\d+\.\d+(?:[-+].*)?", version.strip())
+    assert match is not None, (
+        f"Could not parse Node.js version {version!r}; "
+        "expected node --version output such as v22.0.0"
+    )
+    return int(match.group(1))
+
+
+def require_supported_node_major(major: int) -> None:
+    assert major >= MINIMUM_NODE_MAJOR, (
+        f"Node.js {MINIMUM_NODE_MAJOR} or newer is required; found Node.js {major}"
+    )
+
+
+def reviewer_node_executable() -> str:
     node = shutil.which("node")
     assert node is not None, (
-        "Node.js 24 is required for reviewer verification; "
-        "install Node.js 24 and confirm with node --version"
+        "Node.js 22 or newer is required for reviewer verification; "
+        "install a supported Node.js release and confirm with node --version"
     )
+    version = subprocess.run(
+        [node, "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert version.returncode == 0, f"node --version failed: {version.stderr.strip()}"
+    require_supported_node_major(parse_node_major(version.stdout))
+    return node
+
+
+def run_reviewer_logic(app_path: Path, assertions: str) -> None:
+    node = reviewer_node_executable()
     script = f"""
 const assert = require("node:assert/strict");
 const {{ ReviewerLogic, BUNDLE }} = require(process.argv[1]);
@@ -53,23 +84,41 @@ def test_reviewer_logic_reports_missing_node_prerequisite(
     with pytest.raises(
         AssertionError,
         match=(
-            "Node.js 24 is required for reviewer verification; "
-            "install Node.js 24 and confirm with node --version"
+            "Node.js 22 or newer is required for reviewer verification; "
+            "install a supported Node.js release and confirm with node --version"
         ),
     ):
         run_reviewer_logic(tmp_path / "app.js", "")
 
 
-def test_node_24_reviewer_prerequisite_and_preflight_are_documented() -> None:
+@pytest.mark.parametrize(("version", "major"), [("v22.22.0\n", 22), ("v24.1.0", 24)])
+def test_node_version_parser_accepts_supported_release_output(version: str, major: int) -> None:
+    assert parse_node_major(version) == major
+
+
+def test_node_version_policy_rejects_unsupported_major() -> None:
+    with pytest.raises(
+        AssertionError,
+        match="Node.js 22 or newer is required; found Node.js 21",
+    ):
+        require_supported_node_major(21)
+
+
+def test_node_verifier_contract_and_preflight_are_documented() -> None:
     repository = Path(__file__).parents[1]
     readme = (repository / "README.md").read_text(encoding="utf-8")
     guide = (repository / "docs" / "REVIEWER_GUIDE.md").read_text(encoding="utf-8")
+    preflight = "node --version  # requires v22+; CI/release pin v24"
 
-    assert "Node.js 24" in readme
-    assert "Node.js 24" in guide
+    assert "Node.js 22 or newer" in readme
+    assert "Node.js 22 or newer" in guide
+    assert "pin Node.js 24" in readme
+    assert "pin Node.js 24" in guide
     assert "development and reviewer-verification prerequisite" in readme
-    assert readme.index("node --version") < readme.index("make reviewer-demo")
-    assert guide.index("node --version") < guide.index("uv sync --frozen --extra dev")
+    assert preflight in readme
+    assert preflight in guide
+    assert readme.index(preflight) < readme.index("make reviewer-demo")
+    assert guide.index(preflight) < guide.index("uv sync --frozen --extra dev")
 
 
 def test_reviewer_site_is_deterministic_traceable_and_non_authoritative(tmp_path: Path) -> None:
@@ -172,6 +221,10 @@ def test_reviewer_orients_evaluators_and_links_immutable_release_artifacts(
     assert "make benchmark-smoke" in html
     assert "make reviewer-demo" in html
     assert "make public-boundary" in html
+    assert "Node.js 22 or newer" in html
+    assert "no Node runtime dependency" in html
+    assert "node --version  # requires v22+; CI/release pin v24" in html
+    assert html.index("node --version") < html.index("make verify")
     for label, url in expected_artifacts.items():
         assert f'href="{url}"' in html, label
 
