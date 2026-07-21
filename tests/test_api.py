@@ -85,3 +85,17 @@ def test_api_attests_the_deployment_digest_when_configured(monkeypatch: object) 
     response = client.get("/v1/inventory?seed=577")
 
     assert response.headers["x-forge-qsparx-core-digest"] == digest
+
+
+def test_api_accepts_all_named_benchmark_suites() -> None:
+    client = TestClient(create_app())
+
+    reports = [
+        client.post("/v1/benchmarks", json={"seed": 577, "repetitions": 1, "suite": suite})
+        for suite in ["smoke", "scale", "interop"]
+    ]
+
+    assert all(response.status_code == 200 for response in reports)
+    assert [response.json()["suite"] for response in reports] == ["smoke", "scale", "interop"]
+    assert reports[1].json()["execution_state"] == "not_run"
+    assert reports[2].json()["execution_state"] == "not_run"

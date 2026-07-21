@@ -32,6 +32,9 @@ def test_pages_deploys_release_tags_with_separate_jobs() -> None:
     assert re.search(r"^  deploy:\n", pages, re.MULTILINE)
     assert "needs: build" in pages
     assert "name: github-pages" in pages
+    assert "FORGE_QSPARX_RELEASE_TAG" in pages
+    assert "FORGE_QSPARX_SOURCE_COMMIT" in pages
+    assert "FORGE_QSPARX_IMAGE_DIGEST" in pages
 
 
 def test_release_blocks_high_vulnerabilities_and_avoids_latest_tag() -> None:
@@ -45,6 +48,10 @@ def test_release_blocks_high_vulnerabilities_and_avoids_latest_tag() -> None:
     assert ":latest" not in release
     assert "uses: ./.github/workflows/pages.yml" in release
     assert "needs: release" in release
+    assert release.index("id: image") < release.index(
+        "Build reviewer bundle with immutable release identity"
+    )
+    assert "reviewer-evidence-bundle.json" in release
 
 
 def test_ci_exposes_required_branch_protection_checks() -> None:

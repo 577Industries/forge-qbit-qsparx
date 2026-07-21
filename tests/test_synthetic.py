@@ -1,5 +1,7 @@
+import gzip
+
 from forge_qsparx.canonical import ContentAddressedStore, canonical_digest, canonical_json
-from forge_qsparx.synthetic import generate_mission
+from forge_qsparx.synthetic import generate_mission, generate_scale_corpus
 
 
 def test_synthetic_mission_is_deterministic_and_defense_balanced() -> None:
@@ -53,3 +55,19 @@ def test_content_addressed_store_is_idempotent(tmp_path: object) -> None:
     assert first.path == second.path
     assert first.path.read_bytes() == canonical_json(payload)
     assert store.verify(first)
+
+
+def test_scale_corpus_streams_exact_deterministic_counts(tmp_path: object) -> None:
+    first_dir = tmp_path / "first"  # type: ignore[operator]
+    second_dir = tmp_path / "second"  # type: ignore[operator]
+
+    first = generate_scale_corpus(first_dir, seed=577, assets=10, observations=100)
+    second = generate_scale_corpus(second_dir, seed=577, assets=10, observations=100)
+
+    assert first["asset_count"] == 10
+    assert first["observation_count"] == 100
+    assert first["file_digests"] == second["file_digests"]
+    with gzip.open(first_dir / "assets.ndjson.gz", "rt", encoding="utf-8") as stream:
+        assert sum(1 for _ in stream) == 10
+    with gzip.open(first_dir / "observations.ndjson.gz", "rt", encoding="utf-8") as stream:
+        assert sum(1 for _ in stream) == 100

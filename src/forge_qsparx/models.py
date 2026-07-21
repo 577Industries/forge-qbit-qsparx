@@ -255,3 +255,73 @@ class EvidenceManifest(EvidenceRecord):
     root_digest: ArtifactDigest
     claim_states: list[ClaimState] = Field(min_length=1)
     validator_status: Literal["not_started", "in_progress", "independently_validated"]
+
+
+class EvaluationManifest(EvidenceRecord):
+    """Immutable bindings for a preregistered evaluation release."""
+
+    release_tag: str = Field(pattern=r"^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
+    source_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    image_digest: ArtifactDigest
+    preregistration_digest: ArtifactDigest
+    corpus_digest: ArtifactDigest
+    labels_digest: ArtifactDigest
+    split_digest: ArtifactDigest
+    model_digest: ArtifactDigest
+    environment_digest: ArtifactDigest
+    raw_outputs_digest: ArtifactDigest
+    threshold_revision: int = Field(ge=0, le=1)
+    results_digest: ArtifactDigest
+    limitations: list[str] = Field(min_length=1)
+    validator_report_digests: list[ArtifactDigest] = Field(default_factory=list)
+    validator_status: Literal["not_started", "in_progress", "independently_validated"]
+
+    @model_validator(mode="after")
+    def validate_independent_reports(self) -> EvaluationManifest:
+        if (
+            self.validator_status == "independently_validated"
+            and len(set(self.validator_report_digests)) < 2
+        ):
+            raise ValueError("independent validation requires two distinct validator reports")
+        if self.authority_label == "independently_validated" and self.validator_status != (
+            "independently_validated"
+        ):
+            raise ValueError("independently_validated claims require completed validator reports")
+        return self
+
+
+class BenchmarkReport(EvidenceRecord):
+    """Evidence-bearing summary for one benchmark suite."""
+
+    suite: Literal["smoke", "scale", "interop"]
+    release_tag: str = Field(pattern=r"^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
+    source_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    image_digest: ArtifactDigest
+    evaluation_manifest_digest: ArtifactDigest
+    repetitions: int = Field(ge=1)
+    metrics: dict[str, float] = Field(min_length=1)
+    result_digest: ArtifactDigest
+    limitations: list[str] = Field(min_length=1)
+    validator_report_digests: list[ArtifactDigest] = Field(default_factory=list)
+
+
+class InteropCaseResult(EvidenceRecord):
+    """One native or experimental PQC interoperability case result."""
+
+    case_id: str = Field(min_length=1)
+    matrix: Literal["native_openssl_3_5", "experimental_oqs"]
+    algorithm: str = Field(min_length=1)
+    expected_outcome: Literal["compatible", "incompatible"]
+    observed_outcome: Literal["passed", "failed"]
+    diagnostic_class: str = Field(min_length=1)
+    repetitions: int = Field(ge=1)
+    confidence_level: Literal["95%"] = "95%"
+    latency_ci_ms: tuple[float, float]
+    cpu_seconds: float = Field(ge=0.0)
+    peak_rss_mib: float = Field(ge=0.0)
+    throughput_per_second: float = Field(ge=0.0)
+    handshake_or_message_bytes: int = Field(ge=0)
+    exit_status: int
+    provider_inventory_digest: ArtifactDigest
+    raw_command_digest: ArtifactDigest
+    limitation: str = Field(min_length=1)
