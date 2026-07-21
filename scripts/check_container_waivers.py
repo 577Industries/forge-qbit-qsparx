@@ -41,7 +41,7 @@ def runtime_scope_digest(root: Path = Path(".")) -> str:
     for path in paths:
         digest.update(path.relative_to(root).as_posix().encode())
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        digest.update(path.read_text(encoding="utf-8").encode())
         digest.update(b"\0")
     return f"sha256:{digest.hexdigest()}"
 

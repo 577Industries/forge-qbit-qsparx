@@ -77,7 +77,7 @@ def runtime_waiver_scope_digest() -> str:
     for path in paths:
         digest.update(path.relative_to(ROOT).as_posix().encode())
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        digest.update(path.read_text(encoding="utf-8").encode())
         digest.update(b"\0")
     return f"sha256:{digest.hexdigest()}"
 
