@@ -71,6 +71,22 @@ make benchmark-smoke
 make audit
 ```
 
+Pull requests also run a `Container audit` check that builds and loads a local
+image and blocks high or critical findings without registry authentication or
+push. Tagged releases scan that same local image and generate both SPDX and
+CycloneDX SBOMs before authenticating. They then publish only the version tag
+and `sha-<full-source-sha>` tag under
+`ghcr.io/577industries/forge-qbit-qsparx`, require both remote tags to resolve to
+one digest, and bind attestations and reviewer evidence to that digest. No
+`latest` tag is published.
+
+The v0.1.0 release includes the wheel, source distribution, vulnerability
+report, SPDX and CycloneDX SBOMs, smoke benchmark, reviewer evidence bundle,
+evidence manifest, offline reviewer bundle, and `SHA256SUMS`. Download all
+assets into one directory and run `sha256sum -c SHA256SUMS` before use. See the
+[v0.1.0 release notes](docs/releases/v0.1.0.md) for exact commands, filenames,
+and limitations.
+
 The smoke benchmark is not an acceptance-gate result. Sealed-corpus evaluation,
 the million-observation performance gate, full PQC interoperability,
 representative environment validation, and independent validator reports remain
@@ -88,4 +104,5 @@ query-latency, or detector acceptance result.
 - [Reviewer guide](docs/REVIEWER_GUIDE.md)
 - [Reviewer console validation](docs/REVIEWER_CONSOLE_VALIDATION.md)
 - [Limitations and claim boundaries](docs/LIMITATIONS.md)
+- [v0.1.0 release notes](docs/releases/v0.1.0.md)
 - [Executable foundation plan](docs/superpowers/plans/2026-07-21-qsparx-foundation.md)

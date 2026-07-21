@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: 577industries/forge-qbit-qsparx
 
 jobs:
   release:
@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_digest: ${{ steps.image.outputs.digest }}
+    env:
+      LOCAL_IMAGE: forge-qbit-qsparx:release-${{ github.sha }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -39,23 +41,17 @@ jobs:
           mkdir -p release
           uv build --out-dir release
           uv run forge-qsparx benchmark --suite smoke --repetitions 3 --output release/benchmark-smoke.json
-      - uses: docker/login-action@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - id: image
+      - name: Build and load local release image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          load: true
+          push: false
+          tags: ${{ env.LOCAL_IMAGE }}
       - name: Block high and critical container vulnerabilities
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
+          image: ${{ env.LOCAL_IMAGE }}
           fail-build: true
           severity-cutoff: high
           output-format: json
@@ -63,7 +59,7 @@ jobs:
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
+          image: ${{ env.LOCAL_IMAGE }}
           format: spdx-json
           output-file: release/forge-qbit-qsparx.spdx.json
           upload-artifact: false
@@ -71,11 +67,39 @@ jobs:
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
+          image: ${{ env.LOCAL_IMAGE }}
           format: cyclonedx-json
           output-file: release/forge-qbit-qsparx.cdx.json
           upload-artifact: false
           upload-release-assets: false
+      - name: Authenticate to GHCR after local security gates
+        uses: docker/login-action@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag and push immutable release images
+        env:
+          VERSION_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          SHA_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+        run: |
+          docker tag "${LOCAL_IMAGE}" "${VERSION_IMAGE}"
+          docker tag "${LOCAL_IMAGE}" "${SHA_IMAGE}"
+          docker push "${VERSION_IMAGE}"
+          docker push "${SHA_IMAGE}"
+      - name: Resolve and compare pushed image digests
+        id: image
+        env:
+          VERSION_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          SHA_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+        run: |
+          VERSION_DIGEST="$(docker buildx imagetools inspect "${VERSION_IMAGE}" --format '{{.Manifest.Digest}}')"
+          SHA_DIGEST="$(docker buildx imagetools inspect "${SHA_IMAGE}" --format '{{.Manifest.Digest}}')"
+          test "${VERSION_DIGEST#sha256:}" != "${VERSION_DIGEST}"
+          test "${#VERSION_DIGEST}" -eq 71
+          printf '%s\n' "${VERSION_DIGEST}" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          test "${VERSION_DIGEST}" = "${SHA_DIGEST}"
+          echo "digest=${VERSION_DIGEST}" >> "${GITHUB_OUTPUT}"
       - name: Build reviewer bundle with immutable release identity
         env:
           FORGE_QSPARX_RELEASE_TAG: ${{ github.ref_name }}
@@ -87,7 +111,11 @@ jobs:
           uv run python -c "import json; from pathlib import Path; bundle=json.loads(Path('site/evidence/bundle.json').read_text()); Path('release/evidence-manifest.json').write_text(json.dumps(bundle['manifest'], indent=2, sort_keys=True) + '\n')"
           tar -C site -czf release/reviewer-bundle.tar.gz .
       - name: Create release checksums
-        run: (cd release && sha256sum * > SHA256SUMS)
+        run: |
+          cd release
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\0' \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS
       - name: Attest release files
         uses: actions/attest@36051bcae73b7c2a8a6945a48cbf80953c6baa35 # v4
         with:
@@ -101,8 +129,19 @@ jobs:
       - name: Publish immutable release files
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: release/*
-          generate_release_notes: true
+          body_path: docs/releases/v0.1.0.md
+          fail_on_unmatched_files: true
+          files: |
+            release/forge_qbit_qsparx-0.1.0-py3-none-any.whl
+            release/forge_qbit_qsparx-0.1.0.tar.gz
+            release/container-vulnerabilities.json
+            release/forge-qbit-qsparx.spdx.json
+            release/forge-qbit-qsparx.cdx.json
+            release/benchmark-smoke.json
+            release/reviewer-evidence-bundle.json
+            release/evidence-manifest.json
+            release/reviewer-bundle.tar.gz
+            release/SHA256SUMS
 
   publish-pages:
     name: Publish release reviewer site
