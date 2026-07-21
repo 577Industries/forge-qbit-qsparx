@@ -458,7 +458,11 @@ def test_reviewer_keeps_offline_security_accessibility_and_disclosure_guards(
 
     assert "synthetic" in html.lower()
     assert "non-authoritative" in html.lower()
+    assert '<aside class="boundary-banner"' in html
+    assert 'aria-label="Release boundary"' in html
+    assert '<pre tabindex="0" aria-label="Ten-minute verification commands">' in html
     assert ":focus-visible" in css
+    assert ".verification-path pre:focus-visible" in css
     assert "prefers-reduced-motion" in css and "reduce" in css
     assert "max-width" in css
     assert "data-label" in css
