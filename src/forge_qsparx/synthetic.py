@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import gzip
+import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
-from forge_qsparx.canonical import canonical_digest
+from forge_qsparx.canonical import canonical_digest, canonical_json
 from forge_qsparx.models import (
     SCHEMA_VERSION,
     CryptoAsset,
@@ -19,6 +22,28 @@ from forge_qsparx.models import (
 )
 
 FIXED_EPOCH = datetime(2026, 7, 21, 12, 0, tzinfo=UTC)
+SCALE_ADAPTERS = (
+    "source",
+    "dependency",
+    "binary",
+    "container",
+    "tls",
+    "ssh",
+    "pki",
+    "keystore",
+    "aws-kms",
+    "azure-pki",
+    "cyclonedx",
+)
+SCALE_ALGORITHMS = (
+    "RSA-1024",
+    "RSA-2048",
+    "ECDSA-P256",
+    "AES-256-GCM",
+    "SHA-1",
+    "ML-KEM-768",
+    "ML-DSA-65",
+)
 
 
 @dataclass(frozen=True)
@@ -28,6 +53,99 @@ class SyntheticMission:
     assets: tuple[CryptoAsset, ...]
     relationships: tuple[CryptoRelationship, ...]
     observations: tuple[Observation, ...]
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return f"sha256:{digest.hexdigest()}"
+
+
+def generate_scale_corpus(
+    output_dir: Path, *, seed: int = 577, assets: int = 10_000, observations: int = 1_000_000
+) -> dict[str, Any]:
+    """Stream a deterministic compressed scale corpus and frozen truth manifest."""
+
+    if assets < 1 or observations < 1:
+        raise ValueError("assets and observations must be positive")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    assets_path = output_dir / "assets.ndjson.gz"
+    observations_path = output_dir / "observations.ndjson.gz"
+    modality_distribution = {adapter: 0 for adapter in SCALE_ADAPTERS}
+
+    with (
+        assets_path.open("wb") as raw_assets,
+        gzip.GzipFile(fileobj=raw_assets, mode="wb", mtime=0) as compressed_assets,
+    ):
+        for index in range(assets):
+            adapter = SCALE_ADAPTERS[(index + seed) % len(SCALE_ADAPTERS)]
+            modality_distribution[adapter] += 1
+            asset_record = {
+                "asset_id": f"asset:scale-v1:{index:05d}",
+                "service_id": f"svc-scale-{index % 40:02d}",
+                "adapter": adapter,
+                "algorithm": SCALE_ALGORITHMS[(index * 3 + seed) % len(SCALE_ALGORITHMS)],
+                "severity": ("low", "medium", "high", "critical")[(index + seed) % 4],
+                "expected_inventory": index % 211 != 0,
+                "ground_truth": True,
+                "data_label": "synthetic",
+                "authority_label": "non_authoritative",
+            }
+            compressed_assets.write(canonical_json(asset_record) + b"\n")
+
+    fixture_counts = {"duplicates": 0, "stale": 0, "malformed": 0, "expected_omissions": 0}
+    with (
+        observations_path.open("wb") as raw_observations,
+        gzip.GzipFile(fileobj=raw_observations, mode="wb", mtime=0) as compressed_observations,
+    ):
+        for index in range(observations):
+            asset_index = (index * 37 + seed) % assets
+            duplicate = index > 0 and index % 997 == 0
+            stale = index % 991 == 0
+            malformed = index % 4999 == 0
+            expected_omission = asset_index % 211 == 0
+            fixture_counts["duplicates"] += int(duplicate)
+            fixture_counts["stale"] += int(stale)
+            fixture_counts["malformed"] += int(malformed)
+            fixture_counts["expected_omissions"] += int(expected_omission)
+            observation_record: dict[str, Any] = {
+                "observation_id": f"observation:scale-v1:{index:07d}",
+                "asset_id": f"asset:scale-v1:{asset_index:05d}",
+                "adapter": SCALE_ADAPTERS[(asset_index + seed) % len(SCALE_ADAPTERS)],
+                "observed_at": (
+                    FIXED_EPOCH - timedelta(days=400)
+                    if stale
+                    else FIXED_EPOCH + timedelta(seconds=index)
+                ).isoformat(),
+                "duplicate_of": (f"observation:scale-v1:{index - 1:07d}" if duplicate else None),
+                "malformed_fixture": malformed,
+                "expected_omission": expected_omission,
+                "data_label": "synthetic",
+                "authority_label": "non_authoritative",
+            }
+            compressed_observations.write(canonical_json(observation_record) + b"\n")
+
+    manifest: dict[str, Any] = {
+        "schema_version": "1.0.0",
+        "profile": "scale-v1",
+        "seed": seed,
+        "asset_count": assets,
+        "observation_count": observations,
+        "modality_distribution": modality_distribution,
+        "fixture_counts": fixture_counts,
+        "file_digests": {
+            "assets.ndjson.gz": _sha256_file(assets_path),
+            "observations.ndjson.gz": _sha256_file(observations_path),
+        },
+        "data_label": "synthetic",
+        "authority_label": "non_authoritative",
+        "claim_state": "background_implemented",
+        "limitation": "Generator output only; acceptance metrics require a sealed evaluation run.",
+    }
+    (output_dir / "truth.json").write_bytes(canonical_json(manifest) + b"\n")
+    return manifest
 
 
 def _envelope(record_id: str, seed: int, payload: Any) -> dict[str, Any]:

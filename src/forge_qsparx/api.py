@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,6 +42,7 @@ class IngestRequest(RequestModel):
 class BenchmarkRequest(RequestModel):
     seed: int = 577
     repetitions: int = Field(default=3, ge=1, le=1000)
+    suite: Literal["smoke", "scale", "interop"] = "smoke"
 
 
 def create_app() -> FastAPI:
@@ -110,7 +111,7 @@ def create_app() -> FastAPI:
 
     @app.post("/v1/benchmarks")
     def benchmark(request: BenchmarkRequest) -> dict[str, Any]:
-        return benchmark_result(request.seed, request.repetitions)
+        return benchmark_result(request.seed, request.repetitions, request.suite)
 
     @app.get("/v1/verification")
     def verification(seed: int = 577, runs: int = Query(default=3, ge=2, le=100)) -> dict[str, Any]:

@@ -48,7 +48,12 @@ jobs:
           python-version: "3.12"
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - run: uv sync --frozen --extra dev
-      - run: make reviewer-demo verify
+      - name: Build bound reviewer site and verify release
+        env:
+          FORGE_QSPARX_RELEASE_TAG: ${{ inputs.release_tag }}
+          FORGE_QSPARX_SOURCE_COMMIT: ${{ inputs.source_commit }}
+          FORGE_QSPARX_IMAGE_DIGEST: ${{ inputs.image_digest }}
+        run: make reviewer-demo verify
       - name: Verify tag and source binding
         env:
           EXPECTED_COMMIT: ${{ inputs.source_commit }}

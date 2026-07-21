@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -32,3 +33,30 @@ def test_repository_rejects_unsafe_world_identifiers(tmp_path: Path, world_id: s
 
     with pytest.raises(ValueError, match="world_id"):
         repository.save_mission(world_id, generate_mission(seed=577))
+
+
+def test_repository_uses_wal_and_indexed_normalized_observations(tmp_path: Path) -> None:
+    database = tmp_path / "qsparx.sqlite3"
+    repository = MissionRepository(database)
+    mission = generate_mission(seed=577)
+
+    repository.save_mission("world-scale", mission)
+
+    with sqlite3.connect(database) as connection:
+        journal_mode = connection.execute("PRAGMA journal_mode").fetchone()
+        observation_count = connection.execute("SELECT COUNT(*) FROM observations").fetchone()
+        indexes = {
+            str(row[1])
+            for row in connection.execute("PRAGMA index_list('observations')").fetchall()
+        }
+    assert journal_mode == ("wal",)
+    assert observation_count == (len(mission.observations),)
+    assert {
+        "observations_world",
+        "observations_asset",
+        "observations_modality",
+        "observations_service",
+        "observations_severity",
+        "observations_provenance",
+        "observations_time",
+    } <= indexes

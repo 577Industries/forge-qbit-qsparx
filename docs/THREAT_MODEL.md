@@ -15,7 +15,7 @@
 |---|---|---|
 | Synthetic evidence promoted as operational | Cross-field Pydantic label validation and explicit claim states | `tests/test_models.py` |
 | Cross-world confused deputy | Ambient `FORGE_WORLD_ID` must exactly match tool input | private approval/world tests |
-| Approval bypass | Approval token required before private ingest, plan, or simulate transport | private approval/world tests |
+| Approval bypass or replay | Private HMAC capability binds tenant, world, operation, plan digest, expiry, issuer, and atomically consumed nonce | private approval-capability/world tests |
 | Core substitution | HTTP loopback allowlist plus request/response SHA-256 digest pin | private core-client tests |
 | Active external reach from public world | No connector packages or active scanner; simulation encodes `effects_applied=false` | verification command and world policy tests |
 | Artifact tampering | Canonical JSON, content addressing, manifest root digest | engine and reviewer tests |
@@ -25,8 +25,9 @@
 
 ## Residual risks
 
-- The private token is opaque to this adapter; the future approval service must
-  validate issuer, audience, expiry, nonce, operation, plan digest, and world.
+- The private verifier is implemented, but human-facing capability issuance and
+  production-secret provisioning remain deployment gates. Production effectors
+  stay disabled.
 - A response digest header is not a substitute for container signature and
   runtime measurement. Release attestations and deployment admission controls
   must verify the image digest independently.

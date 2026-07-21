@@ -151,9 +151,7 @@ def test_public_boundary_accepts_orphan_history_manifest(tmp_path: Path) -> None
         "excluded_paths": ["proposal/"],
         "data_policy": "synthetic_only",
     }
-    (tmp_path / "PUBLIC_BOUNDARY.json").write_text(
-        json.dumps(manifest) + "\n", encoding="utf-8"
-    )
+    (tmp_path / "PUBLIC_BOUNDARY.json").write_text(json.dumps(manifest) + "\n", encoding="utf-8")
 
     result = run_boundary(tmp_path, require_manifest=True)
 

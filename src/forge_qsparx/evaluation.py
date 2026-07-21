@@ -6,6 +6,7 @@ independent validation remain future gates.
 
 from __future__ import annotations
 
+from math import log2
 from typing import Any
 
 import numpy as np
@@ -22,6 +23,57 @@ FEATURES = [
     "graph_outage_impact",
     "graph_centrality",
 ]
+
+
+def inventory_metrics(
+    truth: dict[str, str], detected: dict[str, str]
+) -> dict[str, float | dict[str, float]]:
+    """Measure stable-ID inventory precision, recall, and modality recall."""
+
+    true_ids = set(truth)
+    detected_ids = set(detected)
+    true_positives = true_ids & detected_ids
+    precision = len(true_positives) / len(detected_ids) if detected_ids else 1.0
+    recall = len(true_positives) / len(true_ids) if true_ids else 1.0
+    per_modality: dict[str, float] = {}
+    for modality in sorted(set(truth.values())):
+        expected = {asset_id for asset_id, value in truth.items() if value == modality}
+        per_modality[modality] = len(expected & detected_ids) / len(expected)
+    return {
+        "precision": precision,
+        "recall": recall,
+        "per_modality_recall": per_modality,
+    }
+
+
+def prioritization_metrics(
+    ranked_asset_ids: list[str],
+    relevance: dict[str, int],
+    *,
+    critical_ids: set[str],
+    k: int = 10,
+) -> dict[str, float]:
+    """Measure deterministic top-k ranking quality."""
+
+    if k < 1:
+        raise ValueError("k must be positive")
+    ranked_relevance = [relevance.get(asset_id, 0) for asset_id in ranked_asset_ids[:k]]
+    ideal_relevance = sorted(relevance.values(), reverse=True)[:k]
+
+    def dcg(values: list[int]) -> float:
+        return float(
+            sum((2**value - 1) / log2(index + 2) for index, value in enumerate(values))
+        )
+
+    ideal = dcg(ideal_relevance)
+    ndcg = dcg(ranked_relevance) / ideal if ideal else 1.0
+    top_k = set(ranked_asset_ids[:k])
+    critical_recall = len(top_k & critical_ids) / len(critical_ids) if critical_ids else 1.0
+    critical_key = "critical_top_ten_recall" if k == 10 else f"critical_top_{k}_recall"
+    return {
+        f"ndcg_at_{k}": round(ndcg, 6),
+        critical_key: round(critical_recall, 6),
+    }
 
 
 def _metrics(labels: np.ndarray[Any, Any], scores: np.ndarray[Any, Any]) -> dict[str, float]:

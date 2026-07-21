@@ -5,7 +5,7 @@ from __future__ import annotations
 import platform
 from statistics import fmean
 from time import perf_counter
-from typing import Any
+from typing import Any, Literal
 
 from forge_qsparx.canonical import canonical_digest
 from forge_qsparx.engine import QsparxEngine
@@ -46,9 +46,26 @@ def simulation_result(seed: int, world_id: str) -> dict[str, Any]:
     return engine.simulate(engine.plan(world_id=world_id)).model_dump(mode="json")
 
 
-def benchmark_result(seed: int, repetitions: int) -> dict[str, Any]:
+def benchmark_result(
+    seed: int, repetitions: int, suite: Literal["smoke", "scale", "interop"] = "smoke"
+) -> dict[str, Any]:
     if repetitions < 1:
         raise ValueError("repetitions must be at least 1")
+    if suite != "smoke":
+        return {
+            "benchmark_id": f"synthetic-{suite}-suite-1.0.0",
+            "suite": suite,
+            "execution_state": "not_run",
+            "claim_state": "planned_phase_i",
+            "acceptance_gate": False,
+            "seed": seed,
+            "repetitions": repetitions,
+            "metrics": {},
+            "limitation": (
+                f"The {suite} suite interface is frozen, but no result is emitted until its "
+                "preregistered corpus or interoperability matrix is executed."
+            ),
+        }
     durations_ms: list[float] = []
     result_digest = ""
     for _ in range(repetitions):
@@ -64,6 +81,8 @@ def benchmark_result(seed: int, repetitions: int) -> dict[str, Any]:
     evaluation = evaluate_detectors(seed=seed, samples=160)
     return {
         "benchmark_id": "synthetic-pipeline-smoke-1.0.0",
+        "suite": suite,
+        "execution_state": "completed",
         "claim_state": "measured_synthetic",
         "acceptance_gate": False,
         "limitation": (

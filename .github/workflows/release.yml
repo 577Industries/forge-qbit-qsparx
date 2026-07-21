@@ -30,14 +30,12 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --frozen --extra dev
-      - run: make verify benchmark-smoke audit reviewer-demo
+      - run: make verify benchmark-smoke audit
       - name: Build release files
         run: |
           mkdir -p release
           uv build --out-dir release
           uv run forge-qsparx benchmark --suite smoke --repetitions 3 --output release/benchmark-smoke.json
-          cp site/evidence/bundle.json release/evidence-manifest.json
-          tar -C site -czf release/reviewer-bundle.tar.gz .
       - uses: docker/login-action@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -75,6 +73,16 @@ jobs:
           output-file: release/forge-qbit-qsparx.cdx.json
           upload-artifact: false
           upload-release-assets: false
+      - name: Build reviewer bundle with immutable release identity
+        env:
+          FORGE_QSPARX_RELEASE_TAG: ${{ github.ref_name }}
+          FORGE_QSPARX_SOURCE_COMMIT: ${{ github.sha }}
+          FORGE_QSPARX_IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          make reviewer-demo
+          cp site/evidence/bundle.json release/reviewer-evidence-bundle.json
+          uv run python -c "import json; from pathlib import Path; bundle=json.loads(Path('site/evidence/bundle.json').read_text()); Path('release/evidence-manifest.json').write_text(json.dumps(bundle['manifest'], indent=2, sort_keys=True) + '\n')"
+          tar -C site -czf release/reviewer-bundle.tar.gz .
       - name: Create release checksums
         run: (cd release && sha256sum * > SHA256SUMS)
       - name: Attest release files
