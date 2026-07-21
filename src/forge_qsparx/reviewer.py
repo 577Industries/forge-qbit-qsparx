@@ -179,188 +179,257 @@ STYLES_CSS = STYLES_CSS.replace("#117c7e", "#086d70").replace("#b66a2c", "#91471
 
 STYLES_CSS += """.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.reviewer-orientation{padding:48px 0 0;border-bottom:1px solid var(--line)}.reviewer-orientation>div:first-child{display:grid;grid-template-columns:110px 1fr;gap:24px}.orientation-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:28px 0 0;background:var(--line);border:1px solid var(--line)}.orientation-grid article{padding:20px;background:var(--white)}.orientation-grid h3{margin-top:0}.verification-path{display:grid;grid-template-columns:1fr 2fr;gap:24px;padding:24px 0}.verification-path h3,.verification-path p{margin-top:0}.verification-path pre{grid-column:2;margin:0;padding:16px;overflow:auto;background:var(--ink);color:var(--white);border-left:4px solid var(--teal)}.verification-path code{white-space:pre}.custody-rail{display:grid;grid-template-columns:repeat(4,1fr);margin:0;padding:0;list-style:none;border:1px solid var(--line);border-bottom:0}.custody-rail li{position:relative;display:grid;gap:5px;padding:16px 18px;background:var(--white);border-right:1px solid var(--line)}.custody-rail li:not(:last-child)::after{content:"";position:absolute;right:-7px;top:27px;width:12px;height:12px;z-index:1;background:var(--white);border-top:1px solid var(--line);border-right:1px solid var(--line);transform:rotate(45deg)}.custody-rail li:last-child{border-right:0}.custody-rail span{font:700 .7rem ui-monospace,monospace;color:var(--teal)}.custody-rail a{color:var(--ink);font-weight:700}.risk-controls{display:flex;align-items:end;justify-content:space-between;gap:20px}.sort-control{display:grid;gap:5px;padding-bottom:18px;color:var(--muted);font:650 .72rem ui-monospace,monospace;text-transform:uppercase}.sort-control select{min-width:210px;padding:8px;border:1px solid var(--ink);border-radius:0;background:var(--white);color:var(--ink);font:inherit}.result-count{margin:0 0 10px;color:var(--muted);font:600 .75rem ui-monospace,monospace}.risk-table{min-width:980px}.risk-table th span{font-size:.62rem}.identity-cell{display:grid;gap:3px;min-width:150px}.identity-cell code{color:var(--muted)}.factor-list{display:grid;gap:3px;min-width:190px}.factor-count{color:var(--muted);font:650 .68rem ui-monospace,monospace;text-transform:uppercase}.empty-result{padding:30px;text-align:center;color:var(--muted)}.field-guide{color:var(--muted);font-size:.8rem}.claim-fields{grid-template-columns:132px 1fr;margin-bottom:0}.claim-fields dt{color:var(--muted);font-size:.72rem;text-transform:uppercase}.claim-fields dd{overflow-wrap:anywhere}.claim-fields code{color:var(--ink)}.digest-value{display:inline-flex;align-items:center;gap:8px;max-width:100%}.digest-value code{overflow-wrap:anywhere}.copy-button{padding:4px 7px;border:1px solid var(--line);background:transparent;color:var(--teal);font:700 .65rem ui-monospace,monospace;text-transform:uppercase}.copy-status{position:fixed;right:18px;bottom:18px;z-index:4;min-height:1.5rem;margin:0;padding:7px 10px;background:var(--ink);color:var(--white);font:600 .72rem ui-monospace,monospace}.copy-status:empty{display:none}.artifact-index p{margin:12px 0 0}.artifact-index .digest-value{display:grid;justify-items:start}select:focus-visible,summary:focus-visible,.copy-button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}@media(max-width:800px){.reviewer-orientation>div:first-child,.verification-path{grid-template-columns:1fr}.verification-path pre{grid-column:1}.custody-rail{grid-template-columns:1fr 1fr}.custody-rail li:nth-child(2){border-right:0}.risk-controls{align-items:stretch;flex-direction:column;gap:0}.sort-control{justify-self:start}.orientation-grid{grid-template-columns:1fr}}@media(max-width:720px){.risk-table{min-width:0}.risk-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.risk-table,.risk-table tbody,.risk-table tr,.risk-table td{display:block;width:100%}.risk-table tr{padding:8px 12px;border-bottom:1px solid var(--line)}.risk-table td{display:grid;grid-template-columns:minmax(92px,35%) 1fr;gap:12px;padding:8px 0;border:0}.risk-table td::before{content:attr(data-label);color:var(--muted);font:650 .66rem ui-monospace,monospace;text-transform:uppercase}.risk-table .empty-result{display:block;padding:22px 4px}.risk-table .empty-result::before{content:none}.identity-cell,.factor-list{min-width:0}}@media(max-width:520px){.custody-rail{grid-template-columns:1fr}.custody-rail li{border-right:0;border-bottom:1px solid var(--line)}.custody-rail li:not(:last-child)::after{display:none}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}"""
 
-APP_JS = """const byId = (id) => document.getElementById(id);
-const make = (tag, className, text) => {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = String(text);
-  return node;
-};
-const addDefinition = (list, term, value) => {
-  list.append(make("dt", "", term), make("dd", "", value));
-};
-const addDefinitionNode = (list, term, value) => {
-  const definition = make("dd");
-  definition.append(value);
-  list.append(make("dt", "", term), definition);
-};
-const shortDigest = (value) => value.length > 27 ? `${value.slice(0, 19)}…${value.slice(-6)}` : value;
-const copyStatus = byId("copy-status");
-const legacyCopy = (value) => {
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.append(textarea);
-  try {
-    textarea.select();
-    return document.execCommand("copy");
-  } catch (error) {
-    return false;
-  } finally {
-    textarea.remove();
-  }
-};
-const copyText = async (value, label) => {
-  let copied = false;
-  try {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-      await navigator.clipboard.writeText(value);
-      copied = true;
+STYLES_CSS += """.digest-value{flex-wrap:wrap}.manual-copy-value{flex-basis:100%;width:100%;min-height:3.8rem;padding:7px;border:1px solid var(--amber);background:var(--white);color:var(--ink);font:500 .72rem/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}.manual-copy-value:focus-visible{outline:3px solid var(--amber);outline-offset:2px}"""
+
+APP_JS = """const ReviewerLogic = (() => {
+  const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const filterSeverities = ["all", "critical", "high", "medium", "low"];
+  const claimFields = ["claim", "requirement", "implementation", "command", "state", "limitation", "validator_status", "evidence_digest"];
+  const shortDigest = (value) => value.length > 27 ? `${value.slice(0, 19)}…${value.slice(-6)}` : value;
+  const joinRisks = (bundle) => {
+    const inventoryById = new Map(bundle.inventory.map((asset) => [asset.record_id, asset]));
+    const servicesById = new Map(bundle.mission.services.map((service) => [service.service_id, service]));
+    return bundle.risks.map((risk) => {
+      const asset = inventoryById.get(risk.asset_id);
+      const service = asset ? servicesById.get(asset.mission_service_id) : undefined;
+      return { risk, asset, service };
+    });
+  };
+  const sortRisks = (joinedRisks, selectedSort = "score") => {
+    const sorted = joinedRisks.slice();
+    sorted.sort((left, right) => {
+      if (selectedSort === "severity") {
+        const leftSeverity = severityOrder[left.risk.severity] ?? 99;
+        const rightSeverity = severityOrder[right.risk.severity] ?? 99;
+        const severityDifference = leftSeverity - rightSeverity;
+        if (severityDifference !== 0) return severityDifference;
+      }
+      const scoreDifference = right.risk.score - left.risk.score;
+      if (scoreDifference !== 0) return scoreDifference;
+      return left.risk.asset_id.localeCompare(right.risk.asset_id);
+    });
+    return sorted;
+  };
+  const riskView = (bundle, selectedSort = "score", selectedSeverity = "all", limit = 10) => {
+    const sorted = sortRisks(joinRisks(bundle), selectedSort);
+    const ranked = sorted.map((entry, index) => ({ entry, rank: index + 1 }));
+    const filtered = ranked.filter(({ entry }) => selectedSeverity === "all" || entry.risk.severity === selectedSeverity);
+    const visible = filtered.slice(0, limit);
+    return {
+      filters: filterSeverities.map((severity) => ({ severity, pressed: severity === selectedSeverity })),
+      countText: `Showing ${visible.length} of ${sorted.length} risks`,
+      emptyMessage: visible.length === 0 ? "No risks match this filter. Choose another severity." : null,
+      rows: visible.map(({ entry, rank }) => ({
+        rank,
+        assetId: entry.risk.asset_id,
+        assetName: entry.asset ? entry.asset.name : "Unknown asset",
+        serviceId: entry.asset ? entry.asset.mission_service_id : "Unknown service ID",
+        serviceName: entry.service ? entry.service.name : "Unknown service",
+        score: entry.risk.score,
+        severity: entry.risk.severity,
+        factorCount: entry.risk.factors.length,
+        factorLabels: entry.risk.factors.map((factor) => factor.label),
+      })),
+    };
+  };
+  const claimViews = (bundle) => bundle.claims.map((claim) => {
+    const view = {};
+    claimFields.forEach((field) => { view[field] = claim[field]; });
+    return view;
+  });
+  const copyFullDigest = async (value, clipboard, fallbackCopy) => {
+    if (clipboard && typeof clipboard.writeText === "function") {
+      try {
+        await clipboard.writeText(value);
+        return true;
+      } catch (error) {
+        // Continue to the synchronous browser fallback.
+      }
+    }
+    try {
+      return Boolean(await fallbackCopy(value));
+    } catch (error) {
+      return false;
+    }
+  };
+  const copyWithDisclosure = async (value, label, clipboard, fallbackCopy, manualField, status) => {
+    const copied = await copyFullDigest(value, clipboard, fallbackCopy);
+    manualField.readOnly = true;
+    manualField.value = value;
+    manualField.hidden = copied;
+    if (copied) {
+      status.textContent = `${label} copied.`;
     } else {
-      copied = legacyCopy(value);
+      manualField.focus();
+      manualField.select();
+      status.textContent = `Copy failed for ${label}. The full value is revealed below for manual copy.`;
     }
-  } catch (error) {
-    copied = legacyCopy(value);
-  }
-  copyStatus.textContent = copied ? `${label} copied.` : `Copy failed for ${label}. Select the full value from its accessible label.`;
-};
-const digestControl = (value, label) => {
-  const wrapper = make("span", "digest-value");
-  const digest = make("code", "", shortDigest(value));
-  digest.title = value;
-  digest.setAttribute("aria-label", `${label}, full value: ${value}`);
-  digest.setAttribute("data-full-digest", value);
-  const button = make("button", "copy-button", "Copy");
-  button.type = "button";
-  button.setAttribute("aria-label", `Copy full ${label}: ${value}`);
-  button.addEventListener("click", () => { void copyText(value, label); });
-  wrapper.append(digest, button);
-  return wrapper;
-};
+    return copied;
+  };
+  return { shortDigest, joinRisks, sortRisks, riskView, claimViews, copyFullDigest, copyWithDisclosure };
+})();
 
-const b = BUNDLE;
-const release = byId("release-metadata");
-addDefinition(release, "Release", b.release.tag);
-addDefinitionNode(release, "Commit", digestControl(b.release.source_commit, "source commit"));
-addDefinitionNode(release, "Image", digestControl(b.release.image_digest, "image digest"));
-addDefinitionNode(release, "Bundle", digestControl(b.bundle_digest, "bundle digest"));
-addDefinition(release, "Claim", b.release.claim_state);
-addDefinition(release, "Validation", b.release.validation_state);
-byId("mission-description").textContent = b.mission.description;
-[["Assets", b.inventory.length], ["Detections", b.detections.length], ["Migration waves", b.plan.waves.length], ["Real effects", b.simulation.effects_applied ? "YES" : "None"]].forEach(([label, value]) => {
-  const card = make("article", "metric-card");
-  card.append(make("div", "metric", value), make("div", "metric-label", label));
-  byId("summary").append(card);
-});
+if (typeof module !== "undefined" && module.exports) module.exports = { ReviewerLogic, BUNDLE };
 
-const inventoryById = new Map(b.inventory.map((asset) => [asset.record_id, asset]));
-const servicesById = new Map(b.mission.services.map((service) => [service.service_id, service]));
-const joinedRisks = b.risks.map((risk) => {
-  const asset = inventoryById.get(risk.asset_id);
-  const service = asset ? servicesById.get(asset.mission_service_id) : undefined;
-  return { risk, asset, service };
-});
-const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-let selectedSeverity = "all";
-let selectedSort = "score";
-const sortRisks = () => {
-  const sorted = joinedRisks.slice();
-  sorted.sort((left, right) => {
-    if (selectedSort === "severity") {
-      const severityDifference = severityOrder[left.risk.severity] - severityOrder[right.risk.severity];
-      if (severityDifference !== 0) return severityDifference;
+const renderReviewer = () => {
+  const byId = (id) => document.getElementById(id);
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = String(text);
+    return node;
+  };
+  const addDefinition = (list, term, value) => {
+    list.append(make("dt", "", term), make("dd", "", value));
+  };
+  const addDefinitionNode = (list, term, value) => {
+    const definition = make("dd");
+    definition.append(value);
+    list.append(make("dt", "", term), definition);
+  };
+  const copyStatus = byId("copy-status");
+  const legacyCopy = (value) => {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    try {
+      textarea.select();
+      return document.execCommand("copy");
+    } catch (error) {
+      return false;
+    } finally {
+      textarea.remove();
     }
-    const scoreDifference = right.risk.score - left.risk.score;
-    if (scoreDifference !== 0) return scoreDifference;
-    return left.risk.asset_id.localeCompare(right.risk.asset_id);
+  };
+  const digestControl = (value, label) => {
+    const wrapper = make("span", "digest-value");
+    const digest = make("code", "", ReviewerLogic.shortDigest(value));
+    digest.title = value;
+    digest.setAttribute("aria-label", `${label}, full value: ${value}`);
+    digest.setAttribute("data-full-digest", value);
+    const button = make("button", "copy-button", "Copy");
+    button.type = "button";
+    button.setAttribute("aria-label", `Copy full ${label}: ${value}`);
+    const manualField = make("textarea", "manual-copy-value");
+    manualField.rows = 2;
+    manualField.readOnly = true;
+    manualField.hidden = true;
+    manualField.value = value;
+    manualField.setAttribute("aria-label", `Full ${label} for manual copy`);
+    button.addEventListener("click", () => {
+      void ReviewerLogic.copyWithDisclosure(value, label, navigator.clipboard, legacyCopy, manualField, copyStatus);
+    });
+    wrapper.append(digest, button, manualField);
+    return wrapper;
+  };
+
+  const b = BUNDLE;
+  const release = byId("release-metadata");
+  addDefinition(release, "Release", b.release.tag);
+  addDefinitionNode(release, "Commit", digestControl(b.release.source_commit, "source commit"));
+  addDefinitionNode(release, "Image", digestControl(b.release.image_digest, "image digest"));
+  addDefinitionNode(release, "Bundle", digestControl(b.bundle_digest, "bundle digest"));
+  addDefinition(release, "Claim", b.release.claim_state);
+  addDefinition(release, "Validation", b.release.validation_state);
+  byId("mission-description").textContent = b.mission.description;
+  [["Assets", b.inventory.length], ["Detections", b.detections.length], ["Migration waves", b.plan.waves.length], ["Real effects", b.simulation.effects_applied ? "YES" : "None"]].forEach(([label, value]) => {
+    const card = make("article", "metric-card");
+    card.append(make("div", "metric", value), make("div", "metric-label", label));
+    byId("summary").append(card);
   });
-  return sorted;
-};
-const tableCell = (label, text, className = "") => {
-  const cell = make("td", className, text);
-  cell.setAttribute("data-label", label);
-  return cell;
-};
-const identityCell = (label, name, recordId) => {
-  const cell = tableCell(label, undefined, "identity-cell");
-  cell.append(make("strong", "", name), make("code", "", recordId));
-  return cell;
-};
-const riskBody = byId("risks");
-const renderRisks = () => {
-  riskBody.replaceChildren();
-  const sortedRisks = sortRisks();
-  const filteredRisks = sortedRisks.filter(({ risk }) => selectedSeverity === "all" || risk.severity === selectedSeverity);
-  const visibleRisks = filteredRisks.slice(0, 10);
-  byId("risk-count").textContent = `Showing ${visibleRisks.length} of ${joinedRisks.length} risks`;
-  if (visibleRisks.length === 0) {
-    const row = make("tr");
-    const empty = tableCell("Result", "No risks match this filter. Choose another severity.", "empty-result");
-    empty.colSpan = 6;
-    row.append(empty);
-    riskBody.append(row);
-    return;
-  }
-  visibleRisks.forEach(({ risk, asset, service }) => {
-    const row = make("tr");
-    const factors = tableCell("Factor count / Factor labels", undefined, "factor-list");
-    factors.append(make("span", "factor-count", `${risk.factors.length} factors`));
-    risk.factors.forEach((factor) => factors.append(make("span", "", factor.label)));
-    row.append(
-      tableCell("Risk rank", sortedRisks.findIndex(({ risk: item }) => item.asset_id === risk.asset_id) + 1),
-      identityCell("Asset name / Asset ID", asset ? asset.name : "Unknown asset", risk.asset_id),
-      identityCell("Mission service / Service ID", service ? service.name : "Unknown service", asset ? asset.mission_service_id : "Unknown service ID"),
-      tableCell("Score", risk.score),
-      tableCell("Severity", risk.severity, `severity severity-${risk.severity}`),
-      factors,
-    );
-    riskBody.append(row);
+
+  let selectedSeverity = "all";
+  let selectedSort = "score";
+  const tableCell = (label, text, className = "") => {
+    const cell = make("td", className, text);
+    cell.setAttribute("data-label", label);
+    return cell;
+  };
+  const identityCell = (label, name, recordId) => {
+    const cell = tableCell(label, undefined, "identity-cell");
+    cell.append(make("strong", "", name), make("code", "", recordId));
+    return cell;
+  };
+  const riskBody = byId("risks");
+  const renderRisks = () => {
+    riskBody.replaceChildren();
+    const view = ReviewerLogic.riskView(b, selectedSort, selectedSeverity);
+    byId("risk-count").textContent = view.countText;
+    byId("risk-filters").querySelectorAll("button").forEach((button) => {
+      const filter = view.filters.find(({ severity }) => severity === button.dataset.severity);
+      button.setAttribute("aria-pressed", String(Boolean(filter && filter.pressed)));
+    });
+    if (view.emptyMessage) {
+      const row = make("tr");
+      const empty = tableCell("Result", view.emptyMessage, "empty-result");
+      empty.colSpan = 6;
+      row.append(empty);
+      riskBody.append(row);
+      return;
+    }
+    view.rows.forEach((risk) => {
+      const row = make("tr");
+      const factors = tableCell("Factor count / Factor labels", undefined, "factor-list");
+      factors.append(make("span", "factor-count", `${risk.factorCount} factors`));
+      risk.factorLabels.forEach((label) => factors.append(make("span", "", label)));
+      row.append(
+        tableCell("Risk rank", risk.rank),
+        identityCell("Asset name / Asset ID", risk.assetName, risk.assetId),
+        identityCell("Mission service / Service ID", risk.serviceName, risk.serviceId),
+        tableCell("Score", risk.score),
+        tableCell("Severity", risk.severity, `severity severity-${risk.severity}`),
+        factors,
+      );
+      riskBody.append(row);
+    });
+  };
+  byId("risk-filters").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedSeverity = button.dataset.severity;
+      renderRisks();
+    });
   });
-};
-byId("risk-filters").querySelectorAll("button").forEach((button) => {
-  button.addEventListener("click", () => {
-    selectedSeverity = button.dataset.severity;
-    byId("risk-filters").querySelectorAll("button").forEach((item) => { item.ariaPressed = String(item === button); });
+  byId("risk-sort").addEventListener("change", (event) => {
+    selectedSort = event.target.value;
     renderRisks();
   });
-});
-byId("risk-sort").addEventListener("change", (event) => {
-  selectedSort = event.target.value;
   renderRisks();
-});
-renderRisks();
 
-b.plan.waves.forEach((wave) => {
-  const row = make("section", "wave");
-  row.append(make("div", "wave-number", String(wave.wave).padStart(2, "0")));
-  const copy = make("div");
-  copy.append(make("strong", "", wave.objective), make("p", "", `${wave.actions.length} reversible actions · ${wave.exit_criteria.length} exit criteria`));
-  row.append(copy);
-  byId("waves").append(row);
-});
-const failures = b.simulation.compatibility_failures.length ? b.simulation.compatibility_failures : ["No compatibility failure in this synthetic run. Expected-incompatible native PQC cases remain out of scope for v0.1.0."];
-failures.forEach((failure) => byId("failures").append(make("p", "failure", failure)));
-[["Status", b.simulation.status], ["Mission impact", b.simulation.mission_impact], ["Rollback verified", b.simulation.rollback_verified], ["Effects applied", b.simulation.effects_applied]].forEach(([term, value]) => addDefinition(byId("simulation"), term, value));
+  b.plan.waves.forEach((wave) => {
+    const row = make("section", "wave");
+    row.append(make("div", "wave-number", String(wave.wave).padStart(2, "0")));
+    const copy = make("div");
+    copy.append(make("strong", "", wave.objective), make("p", "", `${wave.actions.length} reversible actions · ${wave.exit_criteria.length} exit criteria`));
+    row.append(copy);
+    byId("waves").append(row);
+  });
+  const failures = b.simulation.compatibility_failures.length ? b.simulation.compatibility_failures : ["No compatibility failure in this synthetic run. Expected-incompatible native PQC cases remain out of scope for v0.1.0."];
+  failures.forEach((failure) => byId("failures").append(make("p", "failure", failure)));
+  [["Status", b.simulation.status], ["Mission impact", b.simulation.mission_impact], ["Rollback verified", b.simulation.rollback_verified], ["Effects applied", b.simulation.effects_applied]].forEach(([term, value]) => addDefinition(byId("simulation"), term, value));
 
-b.claims.forEach((claim) => {
-  const details = make("details");
-  const summary = make("summary", "", claim.claim);
-  const fields = make("dl", "claim-fields");
-  addDefinition(fields, "State", claim.state);
-  addDefinition(fields, "Requirement", claim.requirement);
-  addDefinition(fields, "Implementation", claim.implementation);
-  addDefinition(fields, "Command", claim.command);
-  addDefinition(fields, "Limitation", claim.limitation);
-  addDefinition(fields, "Validator status", claim.validator_status);
-  addDefinitionNode(fields, "Evidence digest", digestControl(claim.evidence_digest, `${claim.requirement} evidence digest`));
-  details.append(summary, fields);
-  byId("claims").append(details);
-});
-byId("digest").append(digestControl(b.bundle_digest, "bundle digest"));
-byId("validator-state").textContent = b.release.validation_state;
-byId("footer-tag").textContent = b.release.tag;
+  ReviewerLogic.claimViews(b).forEach((claim) => {
+    const details = make("details");
+    const summary = make("summary", "", claim.claim);
+    const fields = make("dl", "claim-fields");
+    addDefinition(fields, "State", claim.state);
+    addDefinition(fields, "Requirement", claim.requirement);
+    addDefinition(fields, "Implementation", claim.implementation);
+    addDefinition(fields, "Command", claim.command);
+    addDefinition(fields, "Limitation", claim.limitation);
+    addDefinition(fields, "Validator status", claim.validator_status);
+    addDefinitionNode(fields, "Evidence digest", digestControl(claim.evidence_digest, `${claim.requirement} evidence digest`));
+    details.append(summary, fields);
+    byId("claims").append(details);
+  });
+  byId("digest").append(digestControl(b.bundle_digest, "bundle digest"));
+  byId("validator-state").textContent = b.release.validation_state;
+  byId("footer-tag").textContent = b.release.tag;
+};
+
+if (typeof document !== "undefined") renderReviewer();
 """
 
 

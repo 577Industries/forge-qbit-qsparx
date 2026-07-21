@@ -1,3 +1,4 @@
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,6 +19,22 @@ def build_bound_reviewer(output_dir: Path) -> ReviewerSite:
         source_commit=SOURCE_COMMIT,
         image_digest=IMAGE_DIGEST,
     )
+
+
+def run_reviewer_logic(app_path: Path, assertions: str) -> None:
+    script = f"""
+const assert = require("node:assert/strict");
+const {{ ReviewerLogic, BUNDLE }} = require(process.argv[1]);
+{assertions}
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(app_path.resolve())],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_reviewer_site_is_deterministic_traceable_and_non_authoritative(tmp_path: Path) -> None:
@@ -127,7 +144,6 @@ def test_reviewer_orients_evaluators_and_links_immutable_release_artifacts(
 def test_reviewer_risk_queue_is_joined_ranked_filterable_and_accessible(tmp_path: Path) -> None:
     build_bound_reviewer(tmp_path)
     html = (tmp_path / "index.html").read_text(encoding="utf-8")
-    javascript = (tmp_path / "app.js").read_text(encoding="utf-8")
 
     for label in (
         "Risk rank",
@@ -146,15 +162,6 @@ def test_reviewer_risk_queue_is_joined_ranked_filterable_and_accessible(tmp_path
     assert 'aria-live="polite"' in html
     assert 'aria-pressed="true"' in html
     assert "Showing N of M risks" in html
-    assert "Choose another severity" in javascript
-    assert "inventory" in javascript
-    assert "mission.services" in javascript
-    assert ".slice()" in javascript
-    assert "score" in javascript
-    assert "severity" in javascript
-    assert "asset_id" in javascript
-    assert "localeCompare" in javascript
-    assert "ariaPressed" in javascript
 
 
 def test_reviewer_exposes_complete_claim_evidence_and_copyable_full_digests(
@@ -175,17 +182,182 @@ def test_reviewer_exposes_complete_claim_evidence_and_copyable_full_digests(
         "Evidence digest",
     ):
         assert field in html
-    assert 'id="copy-status"' in html
-    assert 'aria-live="polite"' in html
-    assert "navigator.clipboard.writeText" in javascript
-    assert "document.createElement(\"textarea\")" in javascript
-    assert 'document.execCommand("copy")' in javascript
-    assert "shortDigest" in javascript
-    assert "title" in javascript
-    assert "aria-label" in javascript
-    assert "data-full-digest" in javascript
-    assert "Copy failed" in javascript
-    assert "Copy failed" in javascript and "throw" not in javascript
+    assert '<p class="copy-status" id="copy-status" role="status" aria-live="polite">' in html
+    assert "throw" not in javascript
+
+
+def test_reviewer_logic_executes_risk_joins_and_stable_sorting(tmp_path: Path) -> None:
+    build_bound_reviewer(tmp_path)
+
+    run_reviewer_logic(
+        tmp_path / "app.js",
+        """
+const defaultView = ReviewerLogic.riskView(BUNDLE);
+assert.deepEqual(
+  defaultView.rows.slice(0, 4).map(({ rank, assetId }) => [rank, assetId]),
+  [
+    [1, "asset:directory-jks"],
+    [2, "asset:aws-kms-export"],
+    [3, "asset:message-api"],
+    [4, "asset:records-worker"],
+  ],
+);
+assert.deepEqual(defaultView.rows[0], {
+  rank: 1,
+  assetId: "asset:directory-jks",
+  assetName: "Directory Java Keystore",
+  serviceId: "svc-directory",
+  serviceName: "Identity and Directory",
+  score: 95,
+  severity: "critical",
+  factorCount: 3,
+  factorLabels: [
+    "Legacy cryptographic primitive",
+    "Quantum-vulnerable public-key primitive",
+    "Mission graph outage propagation",
+  ],
+});
+const joined = ReviewerLogic.joinRisks(BUNDLE).reverse();
+const sourceOrder = joined.map(({ risk }) => risk.asset_id);
+const scoreOrder = ReviewerLogic.sortRisks(joined, "score");
+assert.deepEqual(joined.map(({ risk }) => risk.asset_id), sourceOrder);
+assert.deepEqual(
+  scoreOrder.filter(({ risk }) => risk.score === 70).map(({ risk }) => risk.asset_id),
+  ["asset:aws-kms-export", "asset:message-api", "asset:records-worker", "asset:tls-relay"],
+);
+const severityView = ReviewerLogic.riskView(BUNDLE, "severity", "all", 100);
+assert.deepEqual(
+  [...new Set(severityView.rows.map(({ severity }) => severity))],
+  ["critical", "high", "medium", "low", "info"],
+);
+assert.deepEqual(
+  severityView.rows.map(({ rank }) => rank),
+  Array.from({ length: 14 }, (_, index) => index + 1),
+);
+""",
+    )
+
+
+def test_reviewer_logic_executes_filter_count_pressed_and_empty_states(tmp_path: Path) -> None:
+    build_bound_reviewer(tmp_path)
+
+    run_reviewer_logic(
+        tmp_path / "app.js",
+        """
+const lowView = ReviewerLogic.riskView(BUNDLE, "score", "low");
+assert.equal(lowView.countText, "Showing 2 of 14 risks");
+assert.deepEqual(lowView.rows.map(({ rank }) => rank), [12, 13]);
+assert.equal(lowView.filters.find(({ severity }) => severity === "low").pressed, true);
+assert.equal(lowView.filters.filter(({ pressed }) => pressed).length, 1);
+assert.equal(lowView.emptyMessage, null);
+const criticalOnly = {
+  ...BUNDLE,
+  risks: BUNDLE.risks.filter(({ severity }) => severity === "critical"),
+};
+const emptyView = ReviewerLogic.riskView(criticalOnly, "score", "low");
+assert.equal(emptyView.countText, "Showing 0 of 1 risks");
+assert.deepEqual(emptyView.rows, []);
+assert.equal(emptyView.filters.find(({ severity }) => severity === "low").pressed, true);
+assert.equal(emptyView.emptyMessage, "No risks match this filter. Choose another severity.");
+""",
+    )
+
+
+def test_reviewer_logic_executes_claim_rendering_and_exact_digest_copy_paths(
+    tmp_path: Path,
+) -> None:
+    build_bound_reviewer(tmp_path)
+
+    run_reviewer_logic(
+        tmp_path / "app.js",
+        """
+(async () => {
+  const claimFields = [
+    "claim", "requirement", "implementation", "command", "state", "limitation",
+    "validator_status", "evidence_digest",
+  ];
+  const claims = ReviewerLogic.claimViews(BUNDLE);
+  assert.equal(claims.length, BUNDLE.claims.length);
+  claims.forEach((claim, index) => {
+    claimFields.forEach((field) => assert.equal(claim[field], BUNDLE.claims[index][field]));
+    assert.deepEqual(Object.keys(claim), claimFields);
+  });
+  assert.equal(claims[0].requirement, "QSPARX-INV-001");
+  assert.equal(claims[1].implementation, "forge_qsparx.engine.QsparxEngine.assess");
+  assert.equal(claims[2].command, "forge-qsparx simulate --world world-reviewer --seed 577");
+
+  const fullDigest = claims[0].evidence_digest;
+  const primaryWrites = [];
+  const unusedFallbackWrites = [];
+  const primaryField = { hidden: true, value: "", focus() {}, select() {} };
+  const primaryStatus = { textContent: "" };
+  const primaryResult = await ReviewerLogic.copyWithDisclosure(
+    fullDigest,
+    "inventory evidence digest",
+    { writeText: async (value) => primaryWrites.push(value) },
+    (value) => { unusedFallbackWrites.push(value); return true; },
+    primaryField,
+    primaryStatus,
+  );
+  assert.equal(primaryResult, true);
+  assert.deepEqual(primaryWrites, [fullDigest]);
+  assert.deepEqual(unusedFallbackWrites, []);
+  assert.equal(primaryField.hidden, true);
+  assert.equal(primaryStatus.textContent, "inventory evidence digest copied.");
+
+  const rejectedWrites = [];
+  const fallbackWrites = [];
+  const fallbackField = { hidden: true, value: "", focus() {}, select() {} };
+  const fallbackStatus = { textContent: "" };
+  const fallbackResult = await ReviewerLogic.copyWithDisclosure(
+    fullDigest,
+    "inventory evidence digest",
+    { writeText: async (value) => {
+      rejectedWrites.push(value);
+      return Promise.reject(new Error("denied"));
+    } },
+    (value) => { fallbackWrites.push(value); return true; },
+    fallbackField,
+    fallbackStatus,
+  );
+  assert.equal(fallbackResult, true);
+  assert.deepEqual(rejectedWrites, [fullDigest]);
+  assert.deepEqual(fallbackWrites, [fullDigest]);
+  assert.equal(fallbackField.hidden, true);
+  assert.equal(fallbackStatus.textContent, "inventory evidence digest copied.");
+
+  const manualField = {
+    hidden: true,
+    readOnly: false,
+    value: "",
+    focused: false,
+    selected: false,
+    focus() { this.focused = true; },
+    select() { this.selected = true; },
+  };
+  const failureStatus = { textContent: "" };
+  const failureResult = await ReviewerLogic.copyWithDisclosure(
+    fullDigest,
+    "inventory evidence digest",
+    { writeText: async () => Promise.reject(new Error("denied")) },
+    () => false,
+    manualField,
+    failureStatus,
+  );
+  assert.equal(failureResult, false);
+  assert.equal(manualField.hidden, false);
+  assert.equal(manualField.readOnly, true);
+  assert.equal(manualField.value, fullDigest);
+  assert.equal(manualField.focused, true);
+  assert.equal(manualField.selected, true);
+  assert.equal(
+    failureStatus.textContent,
+    "Copy failed for inventory evidence digest. " +
+      "The full value is revealed below for manual copy.",
+  );
+})().catch((error) => { console.error(error); process.exit(1); });
+""",
+    )
 
 
 def test_reviewer_keeps_offline_security_accessibility_and_disclosure_guards(
