@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -65,6 +66,22 @@ def published_release_assets(workflow_text: str) -> set[str]:
     return {line.strip() for line in lines if line.startswith("            release/")}
 
 
+def runtime_waiver_scope_digest() -> str:
+    paths = [
+        ROOT / "Dockerfile",
+        ROOT / "pyproject.toml",
+        ROOT / "uv.lock",
+        *sorted((ROOT / "src" / "forge_qsparx").glob("*.py")),
+    ]
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(path.relative_to(ROOT).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return f"sha256:{digest.hexdigest()}"
+
+
 def test_release_uses_the_lowercase_canonical_oci_name() -> None:
     release = workflow("release.yml")
 
@@ -126,17 +143,21 @@ def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() ->
 def test_container_waivers_are_exact_versioned_exceptions_with_expiry() -> None:
     policy = json.loads((ROOT / ".grype.yaml").read_text(encoding="utf-8"))
 
+    assert set(policy) == {"show-suppressed", "ignore"}
     assert policy["show-suppressed"] is True
     rules = policy["ignore"]
     assert {rule["vulnerability"] for rule in rules} == EXPECTED_CONTAINER_WAIVERS
     assert len(rules) == len(EXPECTED_CONTAINER_WAIVERS)
     for rule in rules:
+        assert set(rule) == {"vulnerability", "package", "reason"}
         assert rule["package"] == {
             "name": "python-3.12",
             "version": "3.12.13-r10",
             "type": "apk",
         }
-        assert rule["reason"].startswith("expires=2026-08-21;")
+        assert rule["reason"].startswith(
+            f"expires=2026-08-21; scope={runtime_waiver_scope_digest()};"
+        )
         assert "vulnerable_code_not_in_execute_path" in rule["reason"]
 
     assessment = (ROOT / "docs" / "security" / "container-vulnerability-waivers.md").read_text(
@@ -157,6 +178,7 @@ def test_container_runtime_and_waiver_checks_are_executable_contracts() -> None:
     assert "/v1/inventory?seed=577" in smoke
     assert "datetime.now(UTC).date()" in checker
     assert 'Path(".grype.yaml")' in checker
+    assert "runtime_scope_digest" in checker
 
 
 def test_runtime_image_uses_wolfi_python_312_and_runs_as_nonroot() -> None:
