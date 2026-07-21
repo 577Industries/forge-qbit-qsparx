@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -13,6 +14,14 @@ ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CANONICAL_IMAGE_NAME = "577industries/forge-qbit-qsparx"
 RELEASE_VERSION = "0.1.0"
+EXPECTED_CONTAINER_WAIVERS = {
+    "CVE-2026-7210",
+    "CVE-2026-4224",
+    "CVE-2026-15308",
+    "CVE-2026-9669",
+    "CVE-2026-3644",
+    "CVE-2026-4786",
+}
 
 
 def workflow(name: str) -> str:
@@ -78,6 +87,8 @@ def test_release_notes_limit_determinism_claim_to_mission_and_demo_data() -> Non
 
     assert "All included mission and demo data is deterministic" in notes
     assert "All included data is deterministic" not in notes
+    assert "unwaived high or critical vulnerabilities" in notes
+    assert "container vulnerability waivers" in notes
 
 
 def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() -> None:
@@ -99,15 +110,58 @@ def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() ->
     assert "image: ${{ env.LOCAL_IMAGE }}" in audit
     assert "fail-build: true" in audit
     assert "severity-cutoff: high" in audit
+    assert "only-fixed: false" in audit
     assert "output-format: table" in audit
-    assert audit.index("docker/build-push-action@") < audit.index("anchore/scan-action@")
+    assert "python3 scripts/check_container_waivers.py" in audit
+    assert 'bash scripts/smoke_container.sh "${LOCAL_IMAGE}"' in audit
+    assert "config: .grype.yaml" in audit
+    build = audit.index("docker/build-push-action@")
+    smoke = audit.index("scripts/smoke_container.sh")
+    scan = audit.index("anchore/scan-action@")
+    assert build < smoke < scan
+
+
+def test_container_waivers_are_exact_versioned_exceptions_with_expiry() -> None:
+    policy = json.loads((ROOT / ".grype.yaml").read_text(encoding="utf-8"))
+
+    assert policy["show-suppressed"] is True
+    rules = policy["ignore"]
+    assert {rule["vulnerability"] for rule in rules} == EXPECTED_CONTAINER_WAIVERS
+    assert len(rules) == len(EXPECTED_CONTAINER_WAIVERS)
+    for rule in rules:
+        assert rule["package"] == {
+            "name": "python-3.12",
+            "version": "3.12.13-r10",
+            "type": "apk",
+        }
+        assert rule["reason"].startswith("expires=2026-08-21;")
+        assert "vulnerable_code_not_in_execute_path" in rule["reason"]
+
+    assessment = (ROOT / "docs" / "security" / "container-vulnerability-waivers.md").read_text(
+        encoding="utf-8"
+    )
+    assert "2026-08-21" in assessment
+    for vulnerability in EXPECTED_CONTAINER_WAIVERS:
+        assert vulnerability in assessment
+
+
+def test_container_runtime_and_waiver_checks_are_executable_contracts() -> None:
+    smoke = (ROOT / "scripts" / "smoke_container.sh").read_text(encoding="utf-8")
+    checker = (ROOT / "scripts" / "check_container_waivers.py").read_text(encoding="utf-8")
+
+    assert "docker image inspect" in smoke
+    assert "docker run" in smoke
+    assert "/openapi.json" in smoke
+    assert "/v1/inventory?seed=577" in smoke
+    assert "datetime.now(UTC).date()" in checker
+    assert 'Path(".grype.yaml")' in checker
 
 
 def test_runtime_image_uses_wolfi_python_312_and_runs_as_nonroot() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert dockerfile.count("FROM cgr.dev/chainguard/wolfi-base:latest") == 2
-    assert dockerfile.count("apk add --no-cache python-3.12") == 2
+    assert dockerfile.count("apk add --no-cache python-3.12=3.12.13-r10") == 2
     assert "FROM python:3.12-slim" not in dockerfile
     assert "USER nonroot" in dockerfile
     assert 'ENTRYPOINT ["/app/.venv/bin/python", "-m", "uvicorn"]' in dockerfile
@@ -125,17 +179,22 @@ def test_release_scans_and_generates_both_sboms_before_registry_login() -> None:
     assert "tags: ${{ env.LOCAL_IMAGE }}" in release
     assert "image: ${{ env.LOCAL_IMAGE }}" in release
     assert "severity-cutoff: high" in release
+    assert "only-fixed: false" in release
     assert "fail-build: true" in release
+    assert "python3 scripts/check_container_waivers.py" in release
+    assert 'bash scripts/smoke_container.sh "${LOCAL_IMAGE}"' in release
+    assert "config: .grype.yaml" in release
     assert "format: spdx-json" in release
     assert "format: cyclonedx-json" in release
     assert release.count("image: ${{ env.LOCAL_IMAGE }}") == 3
 
     build = release.index("docker/build-push-action@")
+    smoke = release.index("scripts/smoke_container.sh")
     scan = release.index("anchore/scan-action@")
     spdx = release.index("name: Generate SPDX SBOM")
     cyclonedx = release.index("name: Generate CycloneDX SBOM")
     login = release.index("docker/login-action@")
-    assert build < scan < spdx < cyclonedx < login
+    assert build < smoke < scan < spdx < cyclonedx < login
 
 
 def test_release_pushes_only_version_and_full_source_sha_tags() -> None:

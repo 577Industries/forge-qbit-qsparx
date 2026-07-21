@@ -77,13 +77,19 @@ jobs:
           load: true
           push: false
           tags: ${{ env.LOCAL_IMAGE }}
+      - name: Validate time-bounded vulnerability waivers
+        run: python3 scripts/check_container_waivers.py
+      - name: Smoke-test the local audit image
+        run: bash scripts/smoke_container.sh "${LOCAL_IMAGE}"
       - name: Block high and critical container vulnerabilities
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7
         with:
           image: ${{ env.LOCAL_IMAGE }}
           fail-build: true
           severity-cutoff: high
+          only-fixed: false
           output-format: table
+          config: .grype.yaml
 
   public-boundary:
     name: Public boundary
