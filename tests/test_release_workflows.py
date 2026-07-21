@@ -43,7 +43,9 @@ def local_image(job_text: str) -> str:
     match = re.search(r"^\s+LOCAL_IMAGE:\s+(.+)$", job_text, re.MULTILINE)
     assert match is not None, "workflow must declare one explicit local image tag"
     image = match.group(1).strip()
-    assert not image.startswith("ghcr.io/"), "pre-scan image tag must remain local"
+    assert re.fullmatch(
+        r"forge-qbit-qsparx:(?:ci|release)-\$\{\{ github\.sha \}\}", image
+    ), "pre-scan image tag must use the exact local repository"
     return image
 
 
