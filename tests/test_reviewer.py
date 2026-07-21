@@ -1,6 +1,9 @@
+import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 from forge_qsparx.reviewer import ReviewerSite, build_reviewer_site
 
@@ -22,19 +25,51 @@ def build_bound_reviewer(output_dir: Path) -> ReviewerSite:
 
 
 def run_reviewer_logic(app_path: Path, assertions: str) -> None:
+    node = shutil.which("node")
+    assert node is not None, (
+        "Node.js 24 is required for reviewer verification; "
+        "install Node.js 24 and confirm with node --version"
+    )
     script = f"""
 const assert = require("node:assert/strict");
 const {{ ReviewerLogic, BUNDLE }} = require(process.argv[1]);
 {assertions}
 """
     result = subprocess.run(
-        ["node", "-e", script, str(app_path.resolve())],
+        [node, "-e", script, str(app_path.resolve())],
         check=False,
         capture_output=True,
         text=True,
         timeout=10,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_reviewer_logic_reports_missing_node_prerequisite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    with pytest.raises(
+        AssertionError,
+        match=(
+            "Node.js 24 is required for reviewer verification; "
+            "install Node.js 24 and confirm with node --version"
+        ),
+    ):
+        run_reviewer_logic(tmp_path / "app.js", "")
+
+
+def test_node_24_reviewer_prerequisite_and_preflight_are_documented() -> None:
+    repository = Path(__file__).parents[1]
+    readme = (repository / "README.md").read_text(encoding="utf-8")
+    guide = (repository / "docs" / "REVIEWER_GUIDE.md").read_text(encoding="utf-8")
+
+    assert "Node.js 24" in readme
+    assert "Node.js 24" in guide
+    assert "development and reviewer-verification prerequisite" in readme
+    assert readme.index("node --version") < readme.index("make reviewer-demo")
+    assert guide.index("node --version") < guide.index("uv sync --frozen --extra dev")
 
 
 def test_reviewer_site_is_deterministic_traceable_and_non_authoritative(tmp_path: Path) -> None:

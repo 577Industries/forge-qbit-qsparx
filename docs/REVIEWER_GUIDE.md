@@ -9,9 +9,13 @@ or independent validation.
 
 ## Verification path
 
-Use the source commit displayed in the release plate. From a clean checkout:
+Python 3.12, [uv](https://docs.astral.sh/uv/), and Node.js 24 are prerequisites
+for reviewer verification. Node is used only by the executable reviewer tests;
+it is not an application runtime dependency. Use the source commit displayed in
+the release plate. From a clean checkout, confirm Node before running the path:
 
 ```console
+node --version  # expected: v24.x
 git checkout --detach <source commit displayed in the reviewer>
 uv sync --frozen --extra dev
 make verify

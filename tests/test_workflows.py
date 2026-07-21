@@ -65,3 +65,17 @@ def test_ci_exposes_required_branch_protection_checks() -> None:
         "Release manifest",
     ]:
         assert f"name: {job_name}" in ci
+
+
+def test_linux_and_windows_ci_pin_node_24_before_reviewer_tests() -> None:
+    ci = workflow("ci.yml")
+    setup_node = (
+        "uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0"
+    )
+    linux = ci.split("  linux:\n", 1)[1].split("  windows:\n", 1)[0]
+    windows = ci.split("  windows:\n", 1)[1].split("  dependency-audit:\n", 1)[0]
+
+    assert ci.count(setup_node) == 2
+    for job in (linux, windows):
+        assert 'node-version: "24"' in job
+        assert job.index(setup_node) < job.index("uv run pytest -q")
