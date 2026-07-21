@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+import textwrap
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
@@ -30,6 +35,22 @@ def local_image(job_text: str) -> str:
     image = match.group(1).strip()
     assert not image.startswith("ghcr.io/"), "pre-scan image tag must remain local"
     return image
+
+
+def named_step_script(workflow_text: str, name: str) -> str:
+    marker = f"      - name: {name}\n"
+    assert marker in workflow_text, f"missing workflow step: {name}"
+    step = workflow_text.split(marker, 1)[1].split("\n      - ", 1)[0]
+    run_marker = "        run: |\n"
+    assert run_marker in step, f"workflow step has no shell script: {name}"
+    return textwrap.dedent(step.split(run_marker, 1)[1])
+
+
+def published_release_assets(workflow_text: str) -> set[str]:
+    marker = "          files: |\n"
+    assert marker in workflow_text, "release workflow has no explicit upload list"
+    lines = workflow_text.split(marker, 1)[1].splitlines()
+    return {line.strip() for line in lines if line.startswith("            release/")}
 
 
 def test_release_uses_the_lowercase_canonical_oci_name() -> None:
@@ -165,11 +186,50 @@ def test_release_uses_explicit_notes_and_publishes_the_complete_asset_set() -> N
 
     assert "body_path: docs/releases/v0.1.0.md" in release
     assert "generate_release_notes:" not in release
-    for asset in expected_assets:
-        assert asset in release, f"release is missing required asset: {asset}"
-    assert "! -name SHA256SUMS" in release
-    assert "sort -z" in release
+    assert published_release_assets(release) == expected_assets
     assert "sha256sum -c SHA256SUMS" in release
     assert release.index("name: Create release checksums") < release.index(
         "name: Attest release files"
     )
+
+
+def test_checksum_manifest_exactly_matches_published_assets_with_uv_gitignore(
+    tmp_path: Path,
+) -> None:
+    if shutil.which("bash") is None:
+        pytest.skip("release checksum script requires the Linux release runner's shell")
+
+    release = workflow("release.yml")
+    published = published_release_assets(release)
+    checksum_asset = "release/SHA256SUMS"
+    expected_subjects = {Path(asset).name for asset in published - {checksum_asset}}
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    for subject in expected_subjects:
+        (release_dir / subject).write_text(subject, encoding="utf-8")
+
+    # uv 0.11.16 creates this hidden file when building into the release directory.
+    (release_dir / ".gitignore").write_text("*\n", encoding="utf-8")
+    assert (release_dir / ".gitignore").is_file()
+
+    subprocess.run(
+        [
+            "bash",
+            "-eu",
+            "-o",
+            "pipefail",
+            "-c",
+            named_step_script(release, "Create release checksums"),
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    checksum_subjects = {
+        line.split(maxsplit=1)[1].lstrip("*")
+        for line in (release_dir / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
+    }
+
+    assert checksum_subjects == expected_subjects
+    assert ".gitignore" not in checksum_subjects
