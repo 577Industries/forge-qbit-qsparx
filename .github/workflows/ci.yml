@@ -83,6 +83,7 @@ jobs:
           image: ${{ env.LOCAL_IMAGE }}
           fail-build: true
           severity-cutoff: high
+          output-format: table
 
   public-boundary:
     name: Public boundary

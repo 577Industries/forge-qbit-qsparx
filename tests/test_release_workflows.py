@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 import textwrap
 from pathlib import Path
 
@@ -98,7 +99,18 @@ def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() ->
     assert "image: ${{ env.LOCAL_IMAGE }}" in audit
     assert "fail-build: true" in audit
     assert "severity-cutoff: high" in audit
+    assert "output-format: table" in audit
     assert audit.index("docker/build-push-action@") < audit.index("anchore/scan-action@")
+
+
+def test_runtime_image_uses_wolfi_python_312_and_runs_as_nonroot() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert dockerfile.count("FROM cgr.dev/chainguard/wolfi-base:latest") == 2
+    assert dockerfile.count("apk add --no-cache python-3.12") == 2
+    assert "FROM python:3.12-slim" not in dockerfile
+    assert "USER nonroot" in dockerfile
+    assert 'ENTRYPOINT ["/app/.venv/bin/python", "-m", "uvicorn"]' in dockerfile
 
 
 def test_release_scans_and_generates_both_sboms_before_registry_login() -> None:
@@ -196,7 +208,7 @@ def test_release_uses_explicit_notes_and_publishes_the_complete_asset_set() -> N
 def test_checksum_manifest_exactly_matches_published_assets_with_uv_gitignore(
     tmp_path: Path,
 ) -> None:
-    if shutil.which("bash") is None:
+    if sys.platform == "win32" or shutil.which("bash") is None:
         pytest.skip("release checksum script requires the Linux release runner's shell")
 
     release = workflow("release.yml")
