@@ -9,7 +9,7 @@ import pytest
 from forge_qsparx.reviewer import ReviewerSite, build_reviewer_site
 
 REPOSITORY_URL = "https://github.com/577Industries/forge-qbit-qsparx"
-RELEASE_TAG = "v0.1.1"
+RELEASE_TAG = "v0.1.2"
 SOURCE_COMMIT = "b" * 40
 IMAGE_DIGEST = "sha256:" + "c" * 64
 MINIMUM_NODE_MAJOR = 22
@@ -204,8 +204,8 @@ def test_reviewer_orients_evaluators_and_links_immutable_release_artifacts(
         "cyclonedx_sbom": f"{release_assets}/forge-qbit-qsparx.cdx.json",
         "benchmark": f"{release_assets}/benchmark-smoke.json",
         "source_commit": f"{REPOSITORY_URL}/commit/{SOURCE_COMMIT}",
-        "wheel": f"{release_assets}/forge_qbit_qsparx-0.1.1-py3-none-any.whl",
-        "sdist": f"{release_assets}/forge_qbit_qsparx-0.1.1.tar.gz",
+        "wheel": f"{release_assets}/forge_qbit_qsparx-0.1.2-py3-none-any.whl",
+        "sdist": f"{release_assets}/forge_qbit_qsparx-0.1.2.tar.gz",
         "reviewer_bundle": f"{release_assets}/reviewer-bundle.tar.gz",
         "evidence_manifest": f"{release_assets}/evidence-manifest.json",
         "evidence_bundle": f"{release_assets}/reviewer-evidence-bundle.json",

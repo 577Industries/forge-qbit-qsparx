@@ -48,7 +48,7 @@ class BenchmarkRequest(RequestModel):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Forge Qbit QSPARX",
-        version="0.1.1",
+        version="0.1.2",
         description="Synthetic, non-authoritative, side-effect-free cryptographic mission twin.",
     )
     deployment_digest = os.getenv("FORGE_QSPARX_CORE_DIGEST")

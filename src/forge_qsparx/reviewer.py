@@ -24,7 +24,7 @@ class ReviewerSite:
 
 
 REPOSITORY_URL = "https://github.com/577Industries/forge-qbit-qsparx"
-RELEASE_VERSION = "0.1.1"
+RELEASE_VERSION = "0.1.2"
 
 
 def _artifact_urls(release_tag: str, source_commit: str) -> dict[str, str]:
@@ -407,7 +407,7 @@ const renderReviewer = () => {
     row.append(copy);
     byId("waves").append(row);
   });
-  const failures = b.simulation.compatibility_failures.length ? b.simulation.compatibility_failures : ["No compatibility failure in this synthetic run. Expected-incompatible native PQC cases remain out of scope for v0.1.1."];
+  const failures = b.simulation.compatibility_failures.length ? b.simulation.compatibility_failures : ["No compatibility failure in this synthetic run. Expected-incompatible native PQC cases remain out of scope for v0.1.2."];
   failures.forEach((failure) => byId("failures").append(make("p", "failure", failure)));
   [["Status", b.simulation.status], ["Mission impact", b.simulation.mission_impact], ["Rollback verified", b.simulation.rollback_verified], ["Effects applied", b.simulation.effects_applied]].forEach(([term, value]) => addDefinition(byId("simulation"), term, value));
 

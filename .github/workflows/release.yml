@@ -2,7 +2,7 @@ name: Signed Release
 
 on:
   push:
-    tags: ["v0.1.1"]
+    tags: ["v0.1.2"]
 
 env:
   REGISTRY: ghcr.io
@@ -106,6 +106,16 @@ jobs:
           printf '%s\n' "${VERSION_DIGEST}" | grep -Eq '^sha256:[0-9a-f]{64}$'
           test "${VERSION_DIGEST}" = "${SHA_DIGEST}"
           echo "digest=${VERSION_DIGEST}" >> "${GITHUB_OUTPUT}"
+      - name: Verify anonymous immutable pull and health
+        env:
+          IMMUTABLE_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
+        run: |
+          ANONYMOUS_DOCKER_CONFIG="$(mktemp -d)"
+          test ! -e "${ANONYMOUS_DOCKER_CONFIG}/config.json"
+          export DOCKER_CONFIG="${ANONYMOUS_DOCKER_CONFIG}"
+          unset DOCKER_AUTH_CONFIG
+          docker pull "${IMMUTABLE_IMAGE}"
+          bash scripts/smoke_container.sh "${IMMUTABLE_IMAGE}"
       - name: Build reviewer bundle with immutable release identity
         env:
           FORGE_QSPARX_RELEASE_TAG: ${{ github.ref_name }}
@@ -120,8 +130,8 @@ jobs:
         run: |
           cd release
           sha256sum \
-            forge_qbit_qsparx-0.1.1-py3-none-any.whl \
-            forge_qbit_qsparx-0.1.1.tar.gz \
+            forge_qbit_qsparx-0.1.2-py3-none-any.whl \
+            forge_qbit_qsparx-0.1.2.tar.gz \
             benchmark-smoke.json \
             container-vulnerabilities.json \
             forge-qbit-qsparx.spdx.json \
@@ -144,11 +154,11 @@ jobs:
       - name: Publish immutable release files
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          body_path: docs/releases/v0.1.1.md
+          body_path: docs/releases/v0.1.2.md
           fail_on_unmatched_files: true
           files: |
-            release/forge_qbit_qsparx-0.1.1-py3-none-any.whl
-            release/forge_qbit_qsparx-0.1.1.tar.gz
+            release/forge_qbit_qsparx-0.1.2-py3-none-any.whl
+            release/forge_qbit_qsparx-0.1.2.tar.gz
             release/container-vulnerabilities.json
             release/forge-qbit-qsparx.spdx.json
             release/forge-qbit-qsparx.cdx.json
