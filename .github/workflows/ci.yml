@@ -115,6 +115,10 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --frozen --extra dev
+      - name: Verify action pins belong to declared repositories
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run python scripts/check_workflow_action_pins.py
       - run: make reviewer-demo
       - name: Verify content-addressed reviewer manifest
         run: >-

@@ -51,8 +51,8 @@ port="${binding##*:}"
 base_url="http://127.0.0.1:${port}"
 
 curl --fail --silent --show-error "${base_url}/openapi.json" | python3 -c \
-  'import json, sys; value=json.load(sys.stdin); assert value["info"]["version"] == "0.1.0"'
+  'import json, sys; value=json.load(sys.stdin); assert value["info"]["version"] == "0.1.1"'
 curl --fail --silent --show-error "${base_url}/v1/inventory?seed=577" | python3 -c \
   'import json, sys; value=json.load(sys.stdin); assert value["seed"] == 577 and value["count"] == len(value["assets"]) > 0'
 
-echo "Container is nonroot, healthy, and serving the v0.1.0 API."
+echo "Container is nonroot, healthy, and serving the v0.1.1 API."

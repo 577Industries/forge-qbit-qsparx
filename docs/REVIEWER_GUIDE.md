@@ -1,7 +1,7 @@
 # Ten-Minute Reviewer Guide
 
 The reviewer is a deterministic, read-only evidence room for the synthetic
-v0.1.0 release. It proves that the release produces a synthetic cryptographic
+v0.1.1 release. It proves that the release produces a synthetic cryptographic
 inventory, evidence-decomposable risk queue, effect-free migration simulation,
 and content-addressed claim evidence. It does not prove operational performance,
 sponsor-environment compatibility, FIPS validation, authorization to operate,
@@ -39,22 +39,22 @@ after publication:
 6. Follow the release chain of custody and verify downloaded files with
    `sha256sum -c SHA256SUMS`.
 
-## Immutable v0.1.0 artifact map
+## Immutable v0.1.1 artifact map
 
 Release assets share this immutable prefix:
 
-`https://github.com/577Industries/forge-qbit-qsparx/releases/download/v0.1.0/`
+`https://github.com/577Industries/forge-qbit-qsparx/releases/download/v0.1.1/`
 
 | Artifact | Immutable path |
 | --- | --- |
-| Protected release | `https://github.com/577Industries/forge-qbit-qsparx/releases/tag/v0.1.0` |
+| Protected release | `https://github.com/577Industries/forge-qbit-qsparx/releases/tag/v0.1.1` |
 | Checksums | `SHA256SUMS` |
 | SPDX SBOM | `forge-qbit-qsparx.spdx.json` |
 | CycloneDX SBOM | `forge-qbit-qsparx.cdx.json` |
 | Smoke benchmark | `benchmark-smoke.json` |
 | Source commit | `https://github.com/577Industries/forge-qbit-qsparx/commit/<source commit displayed in the reviewer>` |
-| Python wheel | `forge_qbit_qsparx-0.1.0-py3-none-any.whl` |
-| Source distribution | `forge_qbit_qsparx-0.1.0.tar.gz` |
+| Python wheel | `forge_qbit_qsparx-0.1.1-py3-none-any.whl` |
+| Source distribution | `forge_qbit_qsparx-0.1.1.tar.gz` |
 | Reviewer bundle | `reviewer-bundle.tar.gz` |
 | Evidence manifest | `evidence-manifest.json` |
 | Reviewer evidence bundle | `reviewer-evidence-bundle.json` |
