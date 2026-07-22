@@ -8,7 +8,7 @@
         "version": "3.12.13-r10",
         "type": "apk"
       },
-      "reason": "expires=2026-08-21; scope=sha256:492bf6da59ac1d8d96a3a39a1b16c951def08d32a22ead52e322cf6a6f2d4854; vulnerable_code_not_in_execute_path: the JSON-only API and CLI do not parse adversary-controlled XML"
+      "reason": "expires=2026-08-21; scope=sha256:4626901d92fae9d3934809ba27a1fbf56d21dbb66518ee0a98757f810bdc8751; vulnerable_code_not_in_execute_path: the JSON-only API and CLI do not parse adversary-controlled XML"
     },
     {
       "vulnerability": "CVE-2026-4224",
@@ -17,7 +17,7 @@
         "version": "3.12.13-r10",
         "type": "apk"
       },
-      "reason": "expires=2026-08-21; scope=sha256:492bf6da59ac1d8d96a3a39a1b16c951def08d32a22ead52e322cf6a6f2d4854; vulnerable_code_not_in_execute_path: no product path registers an Expat ElementDeclHandler or parses inline DTDs"
+      "reason": "expires=2026-08-21; scope=sha256:4626901d92fae9d3934809ba27a1fbf56d21dbb66518ee0a98757f810bdc8751; vulnerable_code_not_in_execute_path: no product path registers an Expat ElementDeclHandler or parses inline DTDs"
     },
     {
       "vulnerability": "CVE-2026-15308",
@@ -26,7 +26,7 @@
         "version": "3.12.13-r10",
         "type": "apk"
       },
-      "reason": "expires=2026-08-21; scope=sha256:492bf6da59ac1d8d96a3a39a1b16c951def08d32a22ead52e322cf6a6f2d4854; vulnerable_code_not_in_execute_path: the runtime does not parse adversary-controlled HTML with html.parser"
+      "reason": "expires=2026-08-21; scope=sha256:4626901d92fae9d3934809ba27a1fbf56d21dbb66518ee0a98757f810bdc8751; vulnerable_code_not_in_execute_path: the runtime does not parse adversary-controlled HTML with html.parser"
     },
     {
       "vulnerability": "CVE-2026-9669",
@@ -35,7 +35,7 @@
         "version": "3.12.13-r10",
         "type": "apk"
       },
-      "reason": "expires=2026-08-21; scope=sha256:492bf6da59ac1d8d96a3a39a1b16c951def08d32a22ead52e322cf6a6f2d4854; vulnerable_code_not_in_execute_path: no API or CLI path accepts or decompresses BZ2 input"
+      "reason": "expires=2026-08-21; scope=sha256:4626901d92fae9d3934809ba27a1fbf56d21dbb66518ee0a98757f810bdc8751; vulnerable_code_not_in_execute_path: no API or CLI path accepts or decompresses BZ2 input"
     },
     {
       "vulnerability": "CVE-2026-3644",
@@ -44,7 +44,7 @@
         "version": "3.12.13-r10",
         "type": "apk"
       },
-      "reason": "expires=2026-08-21; scope=sha256:492bf6da59ac1d8d96a3a39a1b16c951def08d32a22ead52e322cf6a6f2d4854; vulnerable_code_not_in_execute_path: routes do not update or unpickle Morsel objects or call Morsel.js_output"
+      "reason": "expires=2026-08-21; scope=sha256:4626901d92fae9d3934809ba27a1fbf56d21dbb66518ee0a98757f810bdc8751; vulnerable_code_not_in_execute_path: routes do not update or unpickle Morsel objects or call Morsel.js_output"
     },
     {
       "vulnerability": "CVE-2026-4786",
@@ -53,7 +53,7 @@
         "version": "3.12.13-r10",
         "type": "apk"
       },
-      "reason": "expires=2026-08-21; scope=sha256:492bf6da59ac1d8d96a3a39a1b16c951def08d32a22ead52e322cf6a6f2d4854; vulnerable_code_not_in_execute_path: the noninteractive runtime does not import or call webbrowser.open"
+      "reason": "expires=2026-08-21; scope=sha256:4626901d92fae9d3934809ba27a1fbf56d21dbb66518ee0a98757f810bdc8751; vulnerable_code_not_in_execute_path: the noninteractive runtime does not import or call webbrowser.open"
     }
   ]
 }

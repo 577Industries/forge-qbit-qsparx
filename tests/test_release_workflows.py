@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,7 @@ import pytest
 ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CANONICAL_IMAGE_NAME = "577industries/forge-qbit-qsparx"
-RELEASE_VERSION = "0.1.0"
+RELEASE_VERSION = "0.1.1"
 EXPECTED_CONTAINER_WAIVERS = {
     "CVE-2026-7210",
     "CVE-2026-4224",
@@ -101,13 +102,66 @@ def test_release_trigger_notes_and_package_assets_share_one_version() -> None:
     assert f"release/forge_qbit_qsparx-{RELEASE_VERSION}.tar.gz" in release
 
 
+def test_product_release_surfaces_share_the_corrected_version() -> None:
+    release_tag = f"v{RELEASE_VERSION}"
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert project["project"]["version"] == RELEASE_VERSION
+    assert f"version: {RELEASE_VERSION}" in (ROOT / "CITATION.cff").read_text(
+        encoding="utf-8"
+    )
+    assert f'version = "{RELEASE_VERSION}"' in (ROOT / "uv.lock").read_text(
+        encoding="utf-8"
+    )
+    assert f'version="{RELEASE_VERSION}"' in (ROOT / "src/forge_qsparx/api.py").read_text(
+        encoding="utf-8"
+    )
+    assert f'RELEASE_VERSION = "{RELEASE_VERSION}"' in (
+        ROOT / "src/forge_qsparx/reviewer.py"
+    ).read_text(encoding="utf-8")
+    assert f'"version": "{RELEASE_VERSION}"' in (
+        ROOT / "src/forge_qsparx/cyclonedx.py"
+    ).read_text(encoding="utf-8")
+    assert release_tag in (ROOT / "scripts/smoke_container.sh").read_text(encoding="utf-8")
+
+
+def test_release_uses_commits_from_the_declared_action_repositories() -> None:
+    release = workflow("release.yml")
+
+    assert (
+        "docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4"
+        in release
+    )
+    assert release.count(
+        "actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4"
+    ) == 2
+    assert "docker/login-action@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6" not in release
+    assert "actions/attest@36051bcae73b7c2a8a6945a48cbf80953c6baa35" not in release
+
+
+def test_pr_release_manifest_audits_action_pin_provenance() -> None:
+    ci = job(workflow("ci.yml"), "release-manifest")
+
+    assert "GITHUB_TOKEN: ${{ github.token }}" in ci
+    assert "uv run python scripts/check_workflow_action_pins.py" in ci
+
+
 def test_release_notes_limit_determinism_claim_to_mission_and_demo_data() -> None:
-    notes = (ROOT / "docs" / "releases" / "v0.1.0.md").read_text(encoding="utf-8")
+    notes = (ROOT / "docs" / "releases" / f"v{RELEASE_VERSION}.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "All included mission and demo data is deterministic" in notes
     assert "All included data is deterministic" not in notes
     assert "unwaived high or critical vulnerabilities" in notes
     assert "container vulnerability waivers" in notes
+
+    failed_notes = (ROOT / "docs" / "releases" / "v0.1.0.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Publication status: failed" in failed_notes
+    assert "No GitHub Release, GHCR image" in failed_notes
+    assert "use `v0.1.1`" in failed_notes
 
 
 def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() -> None:
@@ -267,8 +321,8 @@ def test_release_resolves_matching_remote_digests_before_all_consumers() -> None
 def test_release_uses_explicit_notes_and_publishes_the_complete_asset_set() -> None:
     release = job(workflow("release.yml"), "release", "publish-pages")
     expected_assets = {
-        "release/forge_qbit_qsparx-0.1.0-py3-none-any.whl",
-        "release/forge_qbit_qsparx-0.1.0.tar.gz",
+        f"release/forge_qbit_qsparx-{RELEASE_VERSION}-py3-none-any.whl",
+        f"release/forge_qbit_qsparx-{RELEASE_VERSION}.tar.gz",
         "release/container-vulnerabilities.json",
         "release/forge-qbit-qsparx.spdx.json",
         "release/forge-qbit-qsparx.cdx.json",
@@ -279,7 +333,7 @@ def test_release_uses_explicit_notes_and_publishes_the_complete_asset_set() -> N
         "release/SHA256SUMS",
     }
 
-    assert "body_path: docs/releases/v0.1.0.md" in release
+    assert f"body_path: docs/releases/v{RELEASE_VERSION}.md" in release
     assert "generate_release_notes:" not in release
     assert published_release_assets(release) == expected_assets
     assert "sha256sum -c SHA256SUMS" in release
