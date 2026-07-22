@@ -15,7 +15,7 @@ import pytest
 ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CANONICAL_IMAGE_NAME = "577industries/forge-qbit-qsparx"
-RELEASE_VERSION = "0.1.1"
+RELEASE_VERSION = "0.1.2"
 EXPECTED_CONTAINER_WAIVERS = {
     "CVE-2026-7210",
     "CVE-2026-4224",
@@ -161,7 +161,14 @@ def test_release_notes_limit_determinism_claim_to_mission_and_demo_data() -> Non
     )
     assert "Publication status: failed" in failed_notes
     assert "No GitHub Release, GHCR image" in failed_notes
-    assert "use `v0.1.1`" in failed_notes
+    assert "use `v0.1.2`" in failed_notes
+
+    partial_notes = (ROOT / "docs" / "releases" / "v0.1.1.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Publication status: partial" in partial_notes
+    assert "Pages deployment was rejected" in partial_notes
+    assert "use `v0.1.2`" in partial_notes
 
 
 def test_ci_container_audit_builds_loads_and_blocks_without_registry_access() -> None:
@@ -316,6 +323,30 @@ def test_release_resolves_matching_remote_digests_before_all_consumers() -> None
     assert "subject-digest: ${{ steps.image.outputs.digest }}" in release
     assert "FORGE_QSPARX_IMAGE_DIGEST: ${{ steps.image.outputs.digest }}" in release
     assert "image_digest: ${{ needs.release.outputs.image_digest }}" in release_workflow
+
+
+def test_release_anonymously_pulls_and_health_checks_the_resolved_image() -> None:
+    release = job(workflow("release.yml"), "release", "publish-pages")
+    anonymous = named_step_script(release, "Verify anonymous immutable pull and health")
+
+    assert 'ANONYMOUS_DOCKER_CONFIG="$(mktemp -d)"' in anonymous
+    assert 'test ! -e "${ANONYMOUS_DOCKER_CONFIG}/config.json"' in anonymous
+    assert 'export DOCKER_CONFIG="${ANONYMOUS_DOCKER_CONFIG}"' in anonymous
+    assert "unset DOCKER_AUTH_CONFIG" in anonymous
+    assert 'docker pull "${IMMUTABLE_IMAGE}"' in anonymous
+    assert 'bash scripts/smoke_container.sh "${IMMUTABLE_IMAGE}"' in anonymous
+    assert (
+        "IMMUTABLE_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@"
+        "${{ steps.image.outputs.digest }}"
+        in release
+    )
+
+    resolved = release.index("id: image")
+    anonymous_pull = release.index("name: Verify anonymous immutable pull and health")
+    attestation = release.index("name: Attest OCI image")
+    reviewer = release.index("name: Build reviewer bundle with immutable release identity")
+    assert resolved < anonymous_pull < attestation
+    assert anonymous_pull < reviewer
 
 
 def test_release_uses_explicit_notes_and_publishes_the_complete_asset_set() -> None:

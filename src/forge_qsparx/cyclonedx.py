@@ -210,7 +210,7 @@ def export_cbom(
                     {
                         "type": "application",
                         "name": "forge-qbit-qsparx",
-                        "version": "0.1.1",
+                        "version": "0.1.2",
                     }
                 ]
             },

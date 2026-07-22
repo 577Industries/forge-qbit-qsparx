@@ -62,7 +62,7 @@ def test_evidence_manifest_root_digest_covers_ordered_entries(tmp_path: object) 
     risks = store.put_json({"kind": "risk", "count": 14})
 
     manifest = build_evidence_manifest(
-        release_id="v0.1.1-reviewer",
+        release_id="v0.1.2-reviewer",
         artifacts=[inventory, risks],
         valid_from=datetime(2026, 7, 21, tzinfo=UTC),
     )
