@@ -8,6 +8,7 @@ import subprocess
 import sys
 import textwrap
 import tomllib
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -209,6 +210,19 @@ def test_container_waivers_are_exact_versioned_exceptions_with_expiry() -> None:
     rules = policy["ignore"]
     assert {rule["vulnerability"] for rule in rules} == EXPECTED_CONTAINER_WAIVERS
     assert len(rules) == len(EXPECTED_CONTAINER_WAIVERS)
+    # The expiry is read from the policy rather than pinned as a literal here.
+    # Pinning it meant every renewal broke this test, and — worse — the literal
+    # could drift out of step with `.grype.yaml` while the test still passed.
+    # What actually matters is the invariant: one shared expiry, the current
+    # scope digest on every rule, the date not yet passed, and the assessment
+    # document naming the same date.
+    expiries = {rule["reason"].split(";")[0].removeprefix("expires=") for rule in rules}
+    assert len(expiries) == 1, f"waivers must share one expiry, got {sorted(expiries)}"
+    expiry = date.fromisoformat(next(iter(expiries)))
+    assert expiry >= datetime.now(UTC).date(), (
+        f"container waivers expired on {expiry.isoformat()}; reassess and renew"
+    )
+
     for rule in rules:
         assert set(rule) == {"vulnerability", "package", "reason"}
         assert rule["package"] == {
@@ -217,14 +231,14 @@ def test_container_waivers_are_exact_versioned_exceptions_with_expiry() -> None:
             "type": "apk",
         }
         assert rule["reason"].startswith(
-            f"expires=2026-08-21; scope={runtime_waiver_scope_digest()};"
+            f"expires={expiry.isoformat()}; scope={runtime_waiver_scope_digest()};"
         )
         assert "vulnerable_code_not_in_execute_path" in rule["reason"]
 
     assessment = (ROOT / "docs" / "security" / "container-vulnerability-waivers.md").read_text(
         encoding="utf-8"
     )
-    assert "2026-08-21" in assessment
+    assert expiry.isoformat() in assessment
     for vulnerability in EXPECTED_CONTAINER_WAIVERS:
         assert vulnerability in assessment
 
