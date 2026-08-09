@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.11.16 AS uv
+FROM ghcr.io/astral-sh/uv:0.12.2 AS uv
 
 FROM cgr.dev/chainguard/wolfi-base:latest@sha256:02dab76bd852a70556b5b2002195c8a5fdab77d323c433bf6642aab080489795 AS builder
 
