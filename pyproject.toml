@@ -13,19 +13,19 @@ authors = [{ name = "577 Industries" }]
 dependencies = [
   "cryptography==50.0.0",
   "fastapi==0.139.2",
-  "networkx==3.5",
-  "pydantic==2.11.7",
+  "networkx==3.6.1",
+  "pydantic==2.13.4",
   "scikit-learn==1.7.1",
   "shap==0.48.0",
   "typer==0.16.0",
-  "uvicorn==0.35.0",
+  "uvicorn==0.52.1",
 ]
 
 [project.optional-dependencies]
 dev = [
   "httpx2==2.7.0",
-  "jsonschema==4.25.0",
-  "mypy==1.17.0",
+  "jsonschema==4.26.0",
+  "mypy==2.3.0",
   "pip-audit==2.10.1",
   "pytest==9.1.1",
   "pytest-cov==6.2.1",
