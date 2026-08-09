@@ -14,7 +14,7 @@ dependencies = [
   "cryptography==50.0.0",
   "fastapi==0.139.2",
   "networkx==3.5",
-  "pydantic==2.11.7",
+  "pydantic==2.13.4",
   "scikit-learn==1.7.1",
   "shap==0.48.0",
   "typer==0.16.0",
