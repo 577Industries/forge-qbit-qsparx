@@ -11,7 +11,7 @@ requires-python = ">=3.12,<3.13"
 license = { text = "Apache-2.0" }
 authors = [{ name = "577 Industries" }]
 dependencies = [
-  "cryptography==49.0.0",
+  "cryptography==50.0.0",
   "fastapi==0.139.2",
   "networkx==3.5",
   "pydantic==2.11.7",
