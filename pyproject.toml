@@ -16,7 +16,7 @@ dependencies = [
   "networkx==3.6.1",
   "pydantic==2.13.4",
   "scikit-learn==1.7.1",
-  "shap==0.48.0",
+  "shap==0.52.0",
   "typer==0.16.0",
   "uvicorn==0.52.1",
 ]
