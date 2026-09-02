@@ -1,4 +1,32 @@
 {
   "show-suppressed": true,
-  "ignore": []
+  "ignore": [
+    {
+      "vulnerability": "CVE-2026-7210",
+      "package": {
+        "name": "python-3.12",
+        "version": "3.12.14-r4",
+        "type": "apk"
+      },
+      "reason": "expires=2026-10-01; scope=sha256:b2cb7567944084bef6f4a5eb144f5e2fe1dc2b03efc969e26bc7b923c1ee6239; vulnerable_code_not_in_execute_path: the JSON-only API and CLI do not parse adversary-controlled XML"
+    },
+    {
+      "vulnerability": "CVE-2026-4224",
+      "package": {
+        "name": "python-3.12",
+        "version": "3.12.14-r4",
+        "type": "apk"
+      },
+      "reason": "expires=2026-10-01; scope=sha256:b2cb7567944084bef6f4a5eb144f5e2fe1dc2b03efc969e26bc7b923c1ee6239; vulnerable_code_not_in_execute_path: no product path registers an Expat ElementDeclHandler or parses inline DTDs"
+    },
+    {
+      "vulnerability": "CVE-2026-3644",
+      "package": {
+        "name": "python-3.12",
+        "version": "3.12.14-r4",
+        "type": "apk"
+      },
+      "reason": "expires=2026-10-01; scope=sha256:b2cb7567944084bef6f4a5eb144f5e2fe1dc2b03efc969e26bc7b923c1ee6239; vulnerable_code_not_in_execute_path: routes do not update or unpickle Morsel objects or call Morsel.js_output"
+    }
+  ]
 }

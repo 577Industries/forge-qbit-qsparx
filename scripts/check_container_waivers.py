@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fail closed when the narrowly scoped container vulnerability waivers drift.
 
-No waiver is in force since 2026-09-01: Wolfi published python-3.12 3.12.14,
-which carries the upstream fixes the six earlier waivers covered, and the
-Dockerfile pins it. The checker still validates the policy file's shape so a
-waiver cannot be reintroduced without the expiry / scope / assessment contract
-below.
+Three waivers are in force since 2026-09-01 (CVE-2026-7210, CVE-2026-4224,
+CVE-2026-3644 against Wolfi python-3.12 3.12.14-r4). The other three of the
+2026-08-09 set were retired when 3.12.14 cleared them. An empty ignore list is
+also valid: the shape checks below still run, so a waiver cannot be added
+without the expiry / scope / assessment contract.
 """
 
 from __future__ import annotations
@@ -16,7 +16,11 @@ from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 
-EXPECTED_VULNERABILITIES: set[str] = set()
+EXPECTED_VULNERABILITIES = {
+    "CVE-2026-7210",
+    "CVE-2026-4224",
+    "CVE-2026-3644",
+}
 EXPECTED_PACKAGE = {
     "name": "python-3.12",
     "version": "3.12.14-r4",

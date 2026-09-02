@@ -17,10 +17,15 @@ ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CANONICAL_IMAGE_NAME = "577industries/forge-qbit-qsparx"
 RELEASE_VERSION = "0.1.2"
-# Empty since 2026-09-01: Wolfi python-3.12 3.12.14 carries the fixes the six
-# earlier waivers covered. Adding a waiver back means adding its CVE here, in
-# scripts/check_container_waivers.py, and in the assessment document.
-EXPECTED_CONTAINER_WAIVERS: set[str] = set()
+# Three of the 2026-08-09 six remain after the python-3.12 3.12.14-r4 bump
+# (grype still reports them, with no fixed version). Adding or removing a
+# waiver means changing this set, scripts/check_container_waivers.py, and the
+# assessment document together.
+EXPECTED_CONTAINER_WAIVERS = {
+    "CVE-2026-7210",
+    "CVE-2026-4224",
+    "CVE-2026-3644",
+}
 
 
 def workflow(name: str) -> str:
