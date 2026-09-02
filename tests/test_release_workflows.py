@@ -131,13 +131,13 @@ def test_release_uses_commits_from_the_declared_action_repositories() -> None:
     release = workflow("release.yml")
 
     assert (
-        "docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4"
+        "docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4"
         in release
     )
     assert release.count(
-        "actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4"
+        "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4"
     ) == 2
-    assert "docker/login-action@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6" not in release
+    assert "docker/login-action@1e69f48acb82d1966a394da916b4c1698aa569d6" not in release
     assert "actions/attest@36051bcae73b7c2a8a6945a48cbf80953c6baa35" not in release
 
 
