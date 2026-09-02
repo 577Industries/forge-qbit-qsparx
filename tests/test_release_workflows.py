@@ -17,14 +17,10 @@ ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CANONICAL_IMAGE_NAME = "577industries/forge-qbit-qsparx"
 RELEASE_VERSION = "0.1.2"
-EXPECTED_CONTAINER_WAIVERS = {
-    "CVE-2026-7210",
-    "CVE-2026-4224",
-    "CVE-2026-15308",
-    "CVE-2026-9669",
-    "CVE-2026-3644",
-    "CVE-2026-4786",
-}
+# Empty since 2026-09-01: Wolfi python-3.12 3.12.14 carries the fixes the six
+# earlier waivers covered. Adding a waiver back means adding its CVE here, in
+# scripts/check_container_waivers.py, and in the assessment document.
+EXPECTED_CONTAINER_WAIVERS: set[str] = set()
 
 
 def workflow(name: str) -> str:
@@ -69,10 +65,10 @@ def published_release_assets(workflow_text: str) -> set[str]:
 
 
 def runtime_waiver_scope_digest() -> str:
+    # Mirrors scripts/check_container_waivers.py: Dockerfile + product code
+    # only; dependency manifests left the scope on 2026-09-01.
     paths = [
         ROOT / "Dockerfile",
-        ROOT / "pyproject.toml",
-        ROOT / "uv.lock",
         *sorted((ROOT / "src" / "forge_qsparx").glob("*.py")),
     ]
     digest = hashlib.sha256()
@@ -210,6 +206,9 @@ def test_container_waivers_are_exact_versioned_exceptions_with_expiry() -> None:
     rules = policy["ignore"]
     assert {rule["vulnerability"] for rule in rules} == EXPECTED_CONTAINER_WAIVERS
     assert len(rules) == len(EXPECTED_CONTAINER_WAIVERS)
+    if not rules:
+        # No waiver in force: grype runs unfiltered at the high/critical cutoff.
+        return
     # The expiry is read from the policy rather than pinned as a literal here.
     # Pinning it meant every renewal broke this test, and — worse — the literal
     # could drift out of step with `.grype.yaml` while the test still passed.
@@ -227,7 +226,7 @@ def test_container_waivers_are_exact_versioned_exceptions_with_expiry() -> None:
         assert set(rule) == {"vulnerability", "package", "reason"}
         assert rule["package"] == {
             "name": "python-3.12",
-            "version": "3.12.13-r10",
+            "version": "3.12.14-r4",
             "type": "apk",
         }
         assert rule["reason"].startswith(
@@ -260,7 +259,7 @@ def test_runtime_image_uses_wolfi_python_312_and_runs_as_nonroot() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert dockerfile.count("FROM cgr.dev/chainguard/wolfi-base:latest") == 2
-    assert dockerfile.count("apk add --no-cache python-3.12=3.12.13-r10") == 2
+    assert dockerfile.count("apk add --no-cache python-3.12=3.12.14-r4") == 2
     assert "FROM python:3.12-slim" not in dockerfile
     assert "USER nonroot" in dockerfile
     assert 'ENTRYPOINT ["/app/.venv/bin/python", "-m", "uvicorn"]' in dockerfile

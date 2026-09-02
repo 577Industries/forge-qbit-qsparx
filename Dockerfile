@@ -2,7 +2,7 @@ FROM ghcr.io/astral-sh/uv:0.12.2 AS uv
 
 FROM cgr.dev/chainguard/wolfi-base:latest@sha256:02dab76bd852a70556b5b2002195c8a5fdab77d323c433bf6642aab080489795 AS builder
 
-RUN apk add --no-cache python-3.12=3.12.13-r10
+RUN apk add --no-cache python-3.12=3.12.14-r4
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -19,7 +19,7 @@ RUN uv sync --frozen --no-dev --no-editable
 
 FROM cgr.dev/chainguard/wolfi-base:latest@sha256:02dab76bd852a70556b5b2002195c8a5fdab77d323c433bf6642aab080489795 AS runtime
 
-RUN apk add --no-cache python-3.12=3.12.13-r10
+RUN apk add --no-cache python-3.12=3.12.14-r4
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

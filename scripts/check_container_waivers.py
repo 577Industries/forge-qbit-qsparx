@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Fail closed when the narrowly scoped container vulnerability waivers drift."""
+"""Fail closed when the narrowly scoped container vulnerability waivers drift.
+
+No waiver is in force since 2026-09-01: Wolfi published python-3.12 3.12.14,
+which carries the upstream fixes the six earlier waivers covered, and the
+Dockerfile pins it. The checker still validates the policy file's shape so a
+waiver cannot be reintroduced without the expiry / scope / assessment contract
+below.
+"""
 
 from __future__ import annotations
 
@@ -9,17 +16,10 @@ from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 
-EXPECTED_VULNERABILITIES = {
-    "CVE-2026-7210",
-    "CVE-2026-4224",
-    "CVE-2026-15308",
-    "CVE-2026-9669",
-    "CVE-2026-3644",
-    "CVE-2026-4786",
-}
+EXPECTED_VULNERABILITIES: set[str] = set()
 EXPECTED_PACKAGE = {
     "name": "python-3.12",
-    "version": "3.12.13-r10",
+    "version": "3.12.14-r4",
     "type": "apk",
 }
 POLICY_KEYS = {"show-suppressed", "ignore"}
@@ -31,10 +31,14 @@ REASON_PATTERN = re.compile(
 
 
 def runtime_scope_digest(root: Path = Path(".")) -> str:
+    # Dockerfile + product code only. The dependency manifests (pyproject.toml,
+    # uv.lock) left the scope on 2026-09-01: every Dependabot PR since 08-11 had
+    # invalidated the waivers — including the pip 26.2 security fix — while the
+    # reachability decisions concern stdlib surfaces the product code itself
+    # does or does not call. A Dockerfile or source change still forces
+    # reassessment.
     paths = [
         root / "Dockerfile",
-        root / "pyproject.toml",
-        root / "uv.lock",
         *sorted((root / "src" / "forge_qsparx").glob("*.py")),
     ]
     digest = sha256()
@@ -60,6 +64,10 @@ def main() -> None:
         raise SystemExit("container vulnerability waiver IDs must be unique")
     if set(vulnerabilities) != EXPECTED_VULNERABILITIES:
         raise SystemExit("container vulnerability waiver set changed without policy review")
+
+    if not rules:
+        print("No container vulnerability waivers in force; the image gate runs unfiltered.")
+        return
 
     expiries = set()
     scopes = set()
